@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>PocketNAS · 口袋 NAS 控制中心</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <div class="app-container">
+    
+    <!-- ================= 左侧导航栏 ================= -->
+    <aside class="sidebar">
+      <div class="sidebar-top">
+        <div class="sidebar-header">
+          <div class="logo-badge">⚡</div>
+          <div class="logo-text">
+            <h2>PocketNAS</h2>
+            <p>口袋 NAS · ruiRun0916</p>
+          </div>
+        </div>
+
+        <nav class="nav-menu">
+          <div class="nav-item active" data-tab="tab-overview">
+            <span class="icon">📊</span>
+            <span>系统控制台</span>
+          </div>
+          <div class="nav-item" data-tab="tab-storage">
+            <span class="icon">💾</span>
+            <span>存储矩阵</span>
+          </div>
+          <div class="nav-item" data-tab="tab-network">
+            <span class="icon">🌐</span>
+            <span>网络与连接</span>
+          </div>
+          <div class="nav-item" data-tab="tab-alist">
+            <span class="icon">📁</span>
+            <span>文件系统 (AList)</span>
+          </div>
+        </nav>
+      </div>
+
+      <!-- 侧边栏底部：主题切换 + 执行按键 -->
+      <div class="sidebar-footer">
+        
+        <!-- 三态主题切换 -->
+        <div class="theme-switch-bar">
+          <button class="theme-opt-btn active" id="theme-btn-auto" onclick="setThemeMode('auto')" title="跟随系统设置">
+            <span>💻</span><span>系统</span>
+          </button>
+          <button class="theme-opt-btn" id="theme-btn-light" onclick="setThemeMode('light')" title="渐变白玻璃模式">
+            <span>☀️</span><span>浅色</span>
+          </button>
+          <button class="theme-opt-btn" id="theme-btn-dark" onclick="setThemeMode('dark')" title="深色液态玻璃模式">
+            <span>🌙</span><span>深色</span>
+          </button>
+        </div>
+
+        <button class="btn-glass-action" onclick="handleQuickRun()">
+          <span>⚡ 执行 / 快速刷新</span>
+        </button>
+      </div>
+    </aside>
+
+    <!-- ================= 右侧主区域 ================= -->
+    <main class="main-content">
+
+      <!-- ================= TAB 1: 首页系统控制台 ================= -->
+      <div id="tab-overview" class="tab-pane active">
+        
+        <!-- 顶部英雄卡片 (Hero Card) -->
+        <section class="glass-card hero-card">
+          <div class="hero-left">
+            <h1 id="dev-name">
+              <span>PocketNAS · 口袋 NAS</span>
+            </h1>
+            <p id="dev-sub">
+              <span>高通骁龙 888 (SM8350)</span>
+              <span>·</span>
+              <span>Android 14 (KernelSU Root)</span>
+            </p>
+          </div>
+          <div class="hero-tags">
+            <div class="glow-badge green">
+              <span class="pulse-dot"></span>
+              <span>系统正常</span>
+            </div>
+            <div class="glow-badge cyan" id="health-badge">
+              <span>🛡️ 健康评分: 98%</span>
+            </div>
+            <div class="glow-badge orange" id="power-badge">
+              <span>⚡ 功耗: -- W</span>
+            </div>
+            <div class="glow-badge" id="uptime-badge">
+              <span>⏱️ 运行: 计算中...</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- 第一行：核心资源 3 列网格 (存储 + 内存 + 功耗) -->
+        <section class="grid-3">
+          
+          <!-- 存储空间卡片 (细发光环形图) -->
+          <div class="glass-card">
+            <div class="card-head">
+              <div class="card-title">
+                <span class="icon">💾</span>
+                <span>内部存储 (UFS 3.1)</span>
+              </div>
+              <span style="font-size:11.5px; color:var(--accent-cyan);" id="st-speed-tag">IO: 极速</span>
+            </div>
+            <div class="metric-flex">
+              <div class="glow-ring-box">
+                <svg viewBox="0 0 100 100">
+                  <circle class="ring-bg" cx="50" cy="50" r="38" />
+                  <circle id="storage-ring" class="ring-fg blue" cx="50" cy="50" r="38" stroke-dasharray="0, 238.76" />
+                </svg>
+                <div class="ring-text" id="storage-pct">0%</div>
+              </div>
+              <div class="metric-details">
+                <div class="detail-row"><span class="label">已用容量</span><span class="val" id="storage-used">--</span></div>
+                <div class="detail-row"><span class="label">可用剩余</span><span class="val" id="storage-free">--</span></div>
+                <div class="detail-row"><span class="label">总闪存</span><span class="val" id="storage-total">--</span></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 运行内存卡片 -->
+          <div class="glass-card">
+            <div class="card-head">
+              <div class="card-title">
+                <span class="icon">🧠</span>
+                <span>运行内存 (LPDDR5)</span>
+              </div>
+              <span style="font-size:11.5px; color:var(--accent-green);" id="ram-pressure">压力: 正常</span>
+            </div>
+            <div class="metric-flex">
+              <div class="glow-ring-box">
+                <svg viewBox="0 0 100 100">
+                  <circle class="ring-bg" cx="50" cy="50" r="38" />
+                  <circle id="ram-ring" class="ring-fg green" cx="50" cy="50" r="38" stroke-dasharray="0, 238.76" />
+                </svg>
+                <div class="ring-text" id="ram-pct">0%</div>
+              </div>
+              <div class="metric-details">
+                <div class="detail-row"><span class="label">已占用 RAM</span><span class="val" id="ram-used">--</span></div>
+                <div class="detail-row"><span class="label">空闲可用</span><span class="val" id="ram-free">--</span></div>
+                <div class="detail-row"><span class="label">总容量</span><span class="val" id="ram-total">12.0 GB</span></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 实时功耗与供电卡片 -->
+          <div class="glass-card">
+            <div class="card-head">
+              <div class="card-title">
+                <span class="icon">⚡</span>
+                <span>整机实时功耗</span>
+              </div>
+              <span style="font-weight:700; color:var(--accent-orange);" id="power-main-val">0.0 W</span>
+            </div>
+            <div class="stat-pill-grid">
+              <div class="stat-pill">
+                <span class="title">供电状态</span>
+                <span class="value" id="power-status" style="font-size:13.5px;">--</span>
+              </div>
+              <div class="stat-pill">
+                <span class="title">电池温度</span>
+                <span class="value" id="bat-temp-val">--℃</span>
+              </div>
+              <div class="stat-pill" style="grid-column: 1 / -1;">
+                <span class="title">实时电压 · 电流</span>
+                <span class="value" id="power-vi-val" style="font-size:13.5px; color:var(--accent-cyan);">-- V · -- mA</span>
+              </div>
+            </div>
+          </div>
+
+        </section>
+
+        <!-- 第二行：实时动态波形监控 (CPU/RAM 曲线 + 网络上下行双通道) -->
+        <section class="grid-2">
+          
+          <!-- CPU 负载与实时动态曲线 -->
+          <div class="glass-card">
+            <div class="card-head">
+              <div class="card-title">
+                <span class="icon">🔥</span>
+                <span>CPU 核心负载 (<span id="cpu-val">0%</span>)</span>
+              </div>
+              <span style="font-size:12px; color:var(--accent-cyan);" id="cpu-temp-badge">SoC: --℃</span>
+            </div>
+            <div class="chart-box">
+              <canvas id="cpu-chart"></canvas>
+            </div>
+            <div class="detail-row" style="margin-top: 10px; font-size:11.5px; color:var(--text-muted);">
+              <span>架构: 1×X1 (2.84GHz) + 3×A78 + 4×A55</span>
+              <span id="cpu-freq-text">调度: 节能调速</span>
+            </div>
+          </div>
+
+          <!-- 实时网络吞吐双流曲线 -->
+          <div class="glass-card">
+            <div class="card-head">
+              <div class="card-title">
+                <span class="icon">🌐</span>
+                <span>网络吞吐 (<span id="net-if">wlan0</span>)</span>
+              </div>
+              <span style="font-size:12px; color:var(--accent-green);" id="net-ip-tag">10.x.x.x</span>
+            </div>
+            <div class="chart-box">
+              <canvas id="net-chart"></canvas>
+            </div>
+            <div class="detail-row" style="margin-top: 10px;">
+              <span style="font-size:13px; font-weight:700; color:var(--accent-cyan);" id="net-down">↓ 0 B/s</span>
+              <span style="font-size:13px; font-weight:700; color:var(--accent-green);" id="net-up">↑ 0 B/s</span>
+            </div>
+          </div>
+
+        </section>
+
+        <!-- 第三行：NAS 协议服务矩阵 + 硬件架构规格 -->
+        <section class="grid-2">
+          
+          <!-- 服务矩阵 -->
+          <div class="glass-card">
+            <div class="card-head">
+              <div class="card-title">
+                <span class="icon">📁</span>
+                <span>NAS 服务矩阵</span>
+              </div>
+              <span class="glow-badge green">4 项服务就绪</span>
+            </div>
+            <div style="display:flex; flex-direction:column; gap:8px;">
+              <div class="service-item">
+                <div class="service-left">
+                  <span>📂 AList 存储引擎</span>
+                  <span style="font-size:11px; color:var(--text-muted);">(Port 5244)</span>
+                </div>
+                <span class="glow-badge green" id="srv-alist">● 运行中</span>
+              </div>
+              <div class="service-item">
+                <div class="service-left">
+                  <span>🌐 WebDAV 共享协议</span>
+                  <span style="font-size:11px; color:var(--text-muted);">(局域网挂载)</span>
+                </div>
+                <span class="glow-badge green">● 已就绪</span>
+              </div>
+              <div class="service-item">
+                <div class="service-left">
+                  <span>🔒 SSH / ADB 调试</span>
+                  <span style="font-size:11px; color:var(--text-muted);">(Root 终端)</span>
+                </div>
+                <span class="glow-badge cyan">● 监听中</span>
+              </div>
+              <div class="service-item">
+                <div class="service-left">
+                  <span>🛡️ Monitor 数据采集守护</span>
+                  <span style="font-size:11px; color:var(--text-muted);">(零唤醒开销)</span>
+                </div>
+                <span class="glow-badge green">● 活跃</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 硬件架构卡片 -->
+          <div class="glass-card">
+            <div class="card-head">
+              <div class="card-title">
+                <span class="icon">⚙️</span>
+                <span>硬件架构与快捷操作</span>
+              </div>
+              <span style="font-size:11.5px; color:var(--text-muted);" id="last-update">--</span>
+            </div>
+            <div class="stat-pill-grid" style="margin-top:0;">
+              <div class="stat-pill">
+                <span class="title">处理器 SoC</span>
+                <span class="value" style="font-size:13px;">Snapdragon 888</span>
+              </div>
+              <div class="stat-pill">
+                <span class="title">高速闪存</span>
+                <span class="value" style="font-size:13px;">UFS 3.1 (全盘加密)</span>
+              </div>
+              <div class="stat-pill">
+                <span class="title">无线网络</span>
+                <span class="value" style="font-size:13px;">Wi-Fi 6 增强版</span>
+              </div>
+              <div class="stat-pill">
+                <span class="title">Root 环境</span>
+                <span class="value" style="font-size:13px; color:var(--accent-green);">KernelSU</span>
+              </div>
+            </div>
+
+            <!-- 快捷玻璃按钮 -->
+            <div class="quick-btn-grid">
+              <div class="btn-glass-tile" onclick="fetchStatus(true)">
+                <span class="icon">🔄</span>
+                <span>刷新数据</span>
+              </div>
+              <div class="btn-glass-tile" onclick="switchTab('tab-alist')">
+                <span class="icon">📁</span>
+                <span>打开 AList</span>
+              </div>
+              <div class="btn-glass-tile" onclick="switchTab('tab-network')">
+                <span class="icon">🌐</span>
+                <span>网络信息</span>
+              </div>
+              <div class="btn-glass-tile" onclick="copyText(window.location.origin, 'Dashboard 地址')">
+                <span class="icon">📋</span>
+                <span>复制网址</span>
+              </div>
+            </div>
+          </div>
+
+        </section>
+
+      </div>
+
+      <!-- ================= TAB 2: 存储矩阵 ================= -->
+      <div id="tab-storage" class="tab-pane">
+        <div class="glass-card">
+          <div class="card-head">
+            <div class="card-title">
+              <span class="icon">💾</span>
+              <span>存储矩阵与分区挂载结构</span>
+            </div>
+            <span class="glow-badge green">UFS 3.1 闪存健康</span>
+          </div>
+
+          <div style="display:flex; flex-direction:column; gap:12px; margin-top:8px;">
+            <div class="copy-row">
+              <div class="copy-info">
+                <span class="title">用户主存储挂载点 (AList 映射目标)</span>
+                <span class="url">/data/media/0</span>
+              </div>
+              <button class="btn-copy" onclick="copyText('/data/media/0', '挂载点路径')">📋 复制</button>
+            </div>
+            <div class="detail-row"><span class="label">闪存总容量</span><span class="val" id="storage-total-detail">--</span></div>
+            <div class="detail-row"><span class="label">已使用空间</span><span class="val" id="storage-used-detail">--</span></div>
+            <div class="detail-row"><span class="label">可用剩余空间</span><span class="val" id="storage-free-detail">--</span></div>
+            
+            <div style="margin-top:10px; padding:12px; background:var(--stat-box-bg); border-radius:10px; border:1px solid var(--glass-border);">
+              <p style="font-size:12.5px; color:var(--text-sub); line-height:1.6;">
+                💡 <strong>文件服务指南：</strong> 手机存储已通过 KernelSU 进行低功耗映射，你可以直接在电视端（如 Kodi / 影视仓）或电脑端使用 WebDAV 协议挂载此路径，实现局域网 4K 原画高速流媒体播放。
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ================= TAB 3: 网络与连接配置 (带一键复制) ================= -->
+      <div id="tab-network" class="tab-pane">
+        <div class="glass-card">
+          <div class="card-head">
+            <div class="card-title">
+              <span class="icon">🌐</span>
+              <span>网络接口与服务连接端点</span>
+            </div>
+            <span class="glow-badge cyan">Wi-Fi 6 高速通道</span>
+          </div>
+
+          <div style="display:flex; flex-direction:column; gap:12px; margin-top:10px;">
+            
+            <!-- 局域网 IPv4 复制行 -->
+            <div class="copy-row">
+              <div class="copy-info">
+                <span class="title">局域网 IPv4 地址 (wlan0)</span>
+                <span class="url" id="net-ip-copy-val">--</span>
+              </div>
+              <button class="btn-copy" onclick="copyText(document.getElementById('net-ip-copy-val').innerText, '局域网 IP')">📋 复制 IP</button>
+            </div>
+
+            <!-- Dashboard 访问直链复制行 -->
+            <div class="copy-row">
+              <div class="copy-info">
+                <span class="title">PocketNAS 控制台 URL (当前端口: 8080)</span>
+                <span class="url" id="webui-url-copy-val">http://--:8080</span>
+              </div>
+              <button class="btn-copy" onclick="copyText(document.getElementById('webui-url-copy-val').innerText, '控制台链接')">📋 复制链接</button>
+            </div>
+
+            <!-- AList Lite 访问直链复制行 -->
+            <div class="copy-row">
+              <div class="copy-info">
+                <span class="title">AList 文件系统直链 URL (端口: 5244)</span>
+                <span class="url" id="alist-url-copy-val">http://--:5244</span>
+              </div>
+              <button class="btn-copy" onclick="copyText(document.getElementById('alist-url-copy-val').innerText, 'AList 链接')">📋 复制链接</button>
+            </div>
+
+            <!-- WebDAV 协议连接串 -->
+            <div class="copy-row">
+              <div class="copy-info">
+                <span class="title">WebDAV 局域网挂载端点</span>
+                <span class="url" id="webdav-url-copy-val">http://--:5244/dav</span>
+              </div>
+              <button class="btn-copy" onclick="copyText(document.getElementById('webdav-url-copy-val').innerText, 'WebDAV 挂载串')">📋 复制端点</button>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      <!-- ================= TAB 4: AList 内嵌文件管理 ================= -->
+      <div id="tab-alist" class="tab-pane">
+        <div class="glass-card alist-card">
+          <div class="alist-toolbar">
+            <div style="display:flex; align-items:center; gap:10px;">
+              <span style="font-size:14px; font-weight:700; color:var(--text-main);">📁 AList 私人云存储</span>
+              <span class="glow-badge green" id="alist-badge-status">● 运行中</span>
+            </div>
+            <div style="display:flex; gap:8px;">
+              <button class="btn-copy" onclick="reloadAListFrame()">🔄 刷新</button>
+              <a class="btn-copy" id="btn-open-alist" href="http://127.0.0.1:5244" target="_blank" style="text-decoration:none;">↗ 外部打开</a>
+            </div>
+          </div>
+          <iframe id="alist-frame" class="alist-iframe" src="about:blank"></iframe>
+        </div>
+      </div>
+
+    </main>
+
+  </div>
+
+  <!-- Toast 提示气泡 -->
+  <div id="toast" class="toast-notice">
+    <span>✅</span>
+    <span id="toast-text">已复制到剪贴板</span>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,44 @@
+{
+  "device": "Xiaomi 11 Ultra",
+  "uptime": "0小时 29分",
+  "storage": {
+    "total": "8589934591.9 GB",
+    "used": "0.0 GB",
+    "free": "8589934591.9 GB",
+    "percent": 0
+  },
+  "memory": {
+    "total": "7.7 GB",
+    "used": "0.2 GB",
+    "free": "7.5 GB",
+    "percent": 3
+  },
+  "cpu": {
+    "model": "Qualcomm Snapdragon 888",
+    "usage": 0
+  },
+  "temperature": {
+    "cpu": 40,
+    "battery": 32
+  },
+  "network": {
+    "interface": "wlan0",
+    "ip": "127.0.0.1",
+    "download": "0 B/s",
+    "upload": "0 B/s"
+  },
+  "battery": {
+    "level": 100,
+    "charging": false,
+    "temperature": 32,
+    "power": "0.0 W",
+    "voltage": "0.0 V",
+    "current": "0 mA"
+  },
+  "services": {
+    "alist": false,
+    "alist_url": "http://127.0.0.1:5244",
+    "webdav": false
+  },
+  "time": "2026-08-22 03:17:03"
+}

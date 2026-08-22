@@ -1,9 +1,10 @@
 #!/system/bin/sh
 ui_print "************************************"
-ui_print "     口袋 NAS · PocketNAS Installer  "
+ui_print "   口袋 NAS · PocketNAS Pro v1.8.0   "
+ui_print "       存储百分比与功耗修复版       "
 ui_print "          Author: ruiRun0916        "
 ui_print "************************************"
-ui_print "- 正在安装 PocketNAS 状态监控与控制台模块..."
+ui_print "- 正在安装 PocketNAS Pro v1.8.0..."
 
 # 设置可执行权限
 set_perm_recursive $MODPATH 0 0 0755 0644

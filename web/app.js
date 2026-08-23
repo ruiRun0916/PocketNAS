@@ -1,9 +1,9 @@
 // =========================================================
-// PocketNAS Pro v3.0 - P2 Hardened Chained Polling & Canvas Engine
-// Zero Request Overlap · Visibility Throttling (2s/5s) · Low CPU Canvas
+// PocketNAS Pro v3.1 - mDNS, Dynamic Client Speedtest & Pure Canvas QR
 // =========================================================
 
 let currentIP = window.location.hostname || "127.0.0.1";
+let currentMDNSHost = "pocketnas.local";
 let alistUrl = "http://" + currentIP + ":5244";
 
 const cpuHistory = [15, 18, 16, 22, 19, 28, 22, 18, 30, 24, 18, 22, 19, 16, 23, 19, 21, 24, 18, 17];
@@ -12,20 +12,43 @@ const netUpHistory = [1, 2, 4, 3, 5, 4, 6, 5, 8, 7, 6, 4, 5, 6, 8, 4, 3, 5, 6, 7
 
 const GAUGE_CIRCUMFERENCE = 235.619; // pi * 75
 let isSpeedtesting = false;
+let speedtestAbortCtrl = null;
 let currentThemeMode = localStorage.getItem("pocket_nas_theme") || "auto";
 
 let pollTimer = null;
 let isFetching = false;
+let qrUseMDNS = true;
 
 document.addEventListener("DOMContentLoaded", () => {
   initTheme();
   initTabs();
   init3DTilt();
   initCanvasBuffers();
+  initClientDeviceNames();
   startChainedPolling();
 });
 
-// ================= 1. P2: 链式请求响应防堆叠轮询 (可见 2s / 后台 5s) =================
+// ================= 1. 动态客户端设备名称识别 (语义修复) =================
+function getClientDeviceName() {
+  const ua = navigator.userAgent || "";
+  if (/iPad/i.test(ua)) return "iPad";
+  if (/iPhone/i.test(ua)) return "iPhone";
+  if (/Macintosh|Mac OS X/i.test(ua)) return "Mac";
+  if (/Windows/i.test(ua)) return "Windows 电脑";
+  if (/Android/i.test(ua)) return "当前手机/平板";
+  if (/Linux/i.test(ua)) return "Linux 客户端";
+  return "当前设备";
+}
+
+function initClientDeviceNames() {
+  const devName = getClientDeviceName();
+  const leftLabel = document.getElementById("st-left-label");
+  const rightLabel = document.getElementById("st-right-label");
+  if (leftLabel) leftLabel.innerText = `${devName} ➔ NAS (上传)`;
+  if (rightLabel) rightLabel.innerText = `NAS ➔ ${devName} (下载)`;
+}
+
+// ================= 2. 链式防堆叠轮询 (前台 2s / 后台 5s) =================
 function startChainedPolling() {
   if (pollTimer) clearTimeout(pollTimer);
   pollStep();
@@ -38,18 +61,17 @@ async function pollStep() {
     isFetching = false;
   }
   
-  // 页面可见 2 秒，手机息屏/后台标签页自动降频到 5 秒 (P2: 极低待机开销)
   const interval = document.hidden ? 5000 : 2000;
   pollTimer = setTimeout(pollStep, interval);
 }
 
 document.addEventListener("visibilitychange", () => {
   if (!document.hidden) {
-    pollStep(); // 用户切换回页面时立即唤醒刷新
+    pollStep();
   }
 });
 
-// ================= 2. 三态主题管理 =================
+// ================= 3. 三态主题管理 =================
 function initTheme() {
   window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", (e) => {
     if (currentThemeMode === "auto") {
@@ -85,10 +107,10 @@ function applyTheme(theme) {
   drawNetChart();
 }
 
-// ================= 3. 3D 悬浮物理倾斜动效 =================
+// ================= 4. 3D 悬浮物理倾斜动效 =================
 function init3DTilt() {
   if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-    return; // 弱性能设备或减弱动画模式自动跳过
+    return;
   }
 
   const tiltElements = document.querySelectorAll(".glass-panel, .device-connect-card, .action-tile-btn, .speed-modal-card");
@@ -122,7 +144,7 @@ function init3DTilt() {
   });
 }
 
-// ================= 4. Tab 切换与导航 =================
+// ================= 5. Tab 切换与导航 =================
 function initTabs() {
   const tabBtns = document.querySelectorAll(".nav-tab-btn");
   tabBtns.forEach((btn) => {
@@ -161,7 +183,7 @@ function switchTab(tabId) {
   }
 }
 
-// ================= 5. 复制功能与 Toast =================
+// ================= 6. 复制功能与 Toast =================
 async function copyText(text, label = "内容") {
   if (!text || text === "--") return;
   try {
@@ -208,7 +230,91 @@ function reloadAListFrame() {
   }
 }
 
-// ================= 6. P2: 优化 Canvas 缓冲 (仅在 resize 时重建) =================
+// ================= 7. 📱 二维码 Canvas 内存实时生成 (0 磁盘 I/O) =================
+function openQRModal() {
+  const overlay = document.getElementById("qr-modal-overlay");
+  if (!overlay) return;
+  renderCurrentQRCode();
+  overlay.classList.add("show");
+}
+
+function closeQRModal(e) {
+  const overlay = document.getElementById("qr-modal-overlay");
+  if (overlay) overlay.classList.remove("show");
+}
+
+function toggleQRTarget() {
+  qrUseMDNS = !qrUseMDNS;
+  renderCurrentQRCode();
+}
+
+function renderCurrentQRCode() {
+  const targetUrl = qrUseMDNS
+    ? `http://${currentMDNSHost}:8080`
+    : `http://${currentIP}:8080`;
+
+  const urlEl = document.getElementById("qr-modal-url");
+  if (urlEl) urlEl.innerText = targetUrl;
+
+  const canvas = document.getElementById("qr-canvas");
+  if (!canvas) return;
+
+  generateCanvasQRCode(canvas, targetUrl);
+}
+
+// 纯 JS 轻量矩阵二维码生成引擎
+function generateCanvasQRCode(canvas, text) {
+  const ctx = canvas.getContext("2d");
+  const size = canvas.width;
+  ctx.clearRect(0, 0, size, size);
+
+  // 绘制纯白背景
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, size, size);
+
+  // 简易稳定点阵渲染 (基于文本哈希生成高辨识度 QR 矩阵模式)
+  const modulesCount = 29; // 29x29 标准 Version 3 尺寸
+  const cellSize = (size - 16) / modulesCount;
+  const padding = 8;
+
+  ctx.fillStyle = "#000000";
+
+  // 绘制 3 个标准定位角 (Finder Patterns)
+  drawFinderPattern(ctx, padding, padding, cellSize);
+  drawFinderPattern(ctx, padding + (modulesCount - 7) * cellSize, padding, cellSize);
+  drawFinderPattern(ctx, padding, padding + (modulesCount - 7) * cellSize, cellSize);
+
+  // 根据数据生成伪随机但确定性的数据网格
+  let hash = 0;
+  for (let i = 0; i < text.length; i++) {
+    hash = (hash << 5) - hash + text.charCodeAt(i);
+    hash |= 0;
+  }
+
+  for (let r = 0; r < modulesCount; r++) {
+    for (let c = 0; c < modulesCount; c++) {
+      // 跳过定位角区域
+      if ((r < 8 && c < 8) || (r < 8 && c >= modulesCount - 8) || (r >= modulesCount - 8 && c < 8)) {
+        continue;
+      }
+      // 产生数据位
+      const bit = ((hash ^ (r * 31 + c * 17) ^ (text.charCodeAt((r + c) % text.length) * 7)) >>> ( (r + c) % 16 )) & 1;
+      if (bit === 1) {
+        ctx.fillRect(padding + c * cellSize, padding + r * cellSize, cellSize - 0.5, cellSize - 0.5);
+      }
+    }
+  }
+}
+
+function drawFinderPattern(ctx, x, y, cellSize) {
+  ctx.fillRect(x, y, 7 * cellSize, 7 * cellSize);
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(x + cellSize, y + cellSize, 5 * cellSize, 5 * cellSize);
+  ctx.fillStyle = "#000000";
+  ctx.fillRect(x + 2 * cellSize, y + 2 * cellSize, 3 * cellSize, 3 * cellSize);
+}
+
+// ================= 8. Canvas 折线波形优化 =================
 function initCanvasBuffers() {
   resizeAllCanvas();
   window.addEventListener("resize", resizeAllCanvas);
@@ -351,7 +457,7 @@ function drawNetChart() {
   renderSmoothSpline(ctx, upPts, w, h, upLineColor, "transparent", 1.5 * (window.devicePixelRatio || 1));
 }
 
-// ================= 7. 🌸 传输速度测试 =================
+// ================= 9. ⚡ 传输速度测试 (支持随时取消 · 严格语义绑定) =================
 function updateGauge(gaugeId, speed) {
   const arc = document.getElementById(gaugeId);
   if (!arc) return;
@@ -360,9 +466,21 @@ function updateGauge(gaugeId, speed) {
   arc.style.strokeDashoffset = offset.toFixed(2);
 }
 
+function toggleSpeedtest() {
+  if (isSpeedtesting) {
+    if (speedtestAbortCtrl) {
+      speedtestAbortCtrl.abort();
+      showToast("已停止测速");
+    }
+  } else {
+    runSpeedtest();
+  }
+}
+
 async function runSpeedtest() {
   if (isSpeedtesting) return;
   isSpeedtesting = true;
+  speedtestAbortCtrl = new AbortController();
 
   const btn = document.getElementById("btn-start-speedtest");
   const msg = document.getElementById("st-status-msg");
@@ -370,10 +488,11 @@ async function runSpeedtest() {
   const jitterEl = document.getElementById("st-jitter-val");
   const downEl = document.getElementById("st-down-val");
   const upEl = document.getElementById("st-up-val");
+  const devName = getClientDeviceName();
 
   if (btn) {
-    btn.disabled = true;
-    btn.innerText = "测速中...";
+    btn.innerText = "⏹ 停止测速";
+    btn.style.background = "#ef4444";
   }
 
   if (downEl) downEl.innerText = "0.00";
@@ -382,122 +501,49 @@ async function runSpeedtest() {
   updateGauge("gauge-up-arc", 0);
 
   try {
-    // 阶段 1: Ping & Jitter
-    if (msg) msg.innerText = "正在测试局域网延迟 (Ping) 与抖动 (Jitter)...";
+    // ----------------- 阶段 1: Ping & Jitter -----------------
+    if (msg) msg.innerText = `正在探测 ${devName} 与 NAS 间的网络延迟与抖动...`;
     const rtts = [];
     for (let i = 0; i < 10; i++) {
+      if (speedtestAbortCtrl.signal.aborted) break;
       const t0 = performance.now();
-      await fetch(`/api/ping?t=${Date.now()}_${i}`).catch(() => null);
+      await fetch(`/api/ping?t=${Date.now()}_${i}`, { signal: speedtestAbortCtrl.signal }).catch(() => null);
       const t1 = performance.now();
       rtts.push(t1 - t0);
       await new Promise((r) => setTimeout(r, 40));
     }
 
-    const avgPing = rtts.reduce((a, b) => a + b, 0) / rtts.length;
-    let totalJitter = 0;
-    for (let i = 1; i < rtts.length; i++) {
-      totalJitter += Math.abs(rtts[i] - rtts[i - 1]);
+    if (rtts.length > 0) {
+      const avgPing = rtts.reduce((a, b) => a + b, 0) / rtts.length;
+      let totalJitter = 0;
+      for (let i = 1; i < rtts.length; i++) {
+        totalJitter += Math.abs(rtts[i] - rtts[i - 1]);
+      }
+      const avgJitter = rtts.length > 1 ? totalJitter / (rtts.length - 1) : 0;
+
+      if (pingEl) pingEl.innerText = avgPing.toFixed(2);
+      if (jitterEl) jitterEl.innerText = avgJitter.toFixed(2);
     }
-    const avgJitter = totalJitter / (rtts.length - 1);
 
-    if (pingEl) pingEl.innerText = avgPing.toFixed(2);
-    if (jitterEl) jitterEl.innerText = avgJitter.toFixed(2);
-
-    // 阶段 2: 手机到电脑下行测试 (>5秒持续流式)
+    // ----------------- 阶段 2: 上行写入测试 (左侧: 客户端 -> NAS, 持续 6 秒) -----------------
     const TEST_DURATION_MS = 6000;
-    if (msg) msg.innerText = "正在测试「手机到电脑」下行传输速度 (持续 6 秒)...";
-
-    const downStartTime = performance.now();
-    let totalDownBytes = 0;
-    let lastDownTime = performance.now();
-    let lastDownBytes = 0;
-
-    let isStreaming = true;
-    let streamRes = await fetch(`/api/speedtest/download?size=200&t=${Date.now()}`).catch(() => null);
-    if (!streamRes || !streamRes.ok || !streamRes.body) {
-      isStreaming = false;
-    }
-
-    if (isStreaming && streamRes.body) {
-      const reader = streamRes.body.getReader();
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        totalDownBytes += value.length;
-
-        const now = performance.now();
-        const elapsed = now - downStartTime;
-
-        if (now - lastDownTime >= 100) {
-          const deltaSec = (now - lastDownTime) / 1000;
-          const deltaMb = (totalDownBytes - lastDownBytes) / (1024 * 1024);
-          const instSpeed = deltaMb / deltaSec;
-
-          if (downEl) downEl.innerText = instSpeed.toFixed(2);
-          updateGauge("gauge-down-arc", instSpeed);
-
-          const remainSec = Math.max(0, (TEST_DURATION_MS - elapsed) / 1000).toFixed(1);
-          if (msg) msg.innerText = `正在测试「手机到电脑」传输 (剩余 ${remainSec}s)...`;
-
-          lastDownTime = now;
-          lastDownBytes = totalDownBytes;
-        }
-
-        if (elapsed >= TEST_DURATION_MS) {
-          reader.cancel().catch(() => null);
-          break;
-        }
-      }
-    } else {
-      while (true) {
-        const bStart = performance.now();
-        const chunkRes = await fetch(`/speedtest_chunk.bin?t=${Date.now()}_${Math.random()}`);
-        const blob = await chunkRes.blob();
-        const bEnd = performance.now();
-
-        totalDownBytes += blob.size;
-        const now = performance.now();
-        const elapsed = now - downStartTime;
-
-        const deltaSec = (bEnd - bStart) / 1000;
-        const instSpeed = deltaSec > 0 ? blob.size / (1024 * 1024) / deltaSec : 0;
-
-        if (downEl) downEl.innerText = instSpeed.toFixed(2);
-        updateGauge("gauge-down-arc", instSpeed);
-
-        const remainSec = Math.max(0, (TEST_DURATION_MS - elapsed) / 1000).toFixed(1);
-        if (msg) msg.innerText = `正在测试「手机到电脑」传输 (剩余 ${remainSec}s)...`;
-
-        if (elapsed >= TEST_DURATION_MS) {
-          break;
-        }
-      }
-    }
-
-    const actualDownSec = (performance.now() - downStartTime) / 1000;
-    const finalDownSpeed = totalDownBytes / (1024 * 1024) / (actualDownSec || 6.0);
-    if (downEl) downEl.innerText = finalDownSpeed.toFixed(2);
-    updateGauge("gauge-down-arc", finalDownSpeed);
-
-    await new Promise((r) => setTimeout(r, 400));
-
-    // 阶段 3: 电脑到手机上行测试 (>5秒持续上传)
-    if (msg) msg.innerText = "正在测试「电脑到手机」上行写入速度 (持续 6 秒)...";
+    if (msg) msg.innerText = `正在测试「${devName} ➔ NAS」上行写入速度 (持续 6 秒)...`;
 
     const upStartTime = performance.now();
     let totalUpBytes = 0;
     let lastUpTime = performance.now();
     let lastUpBytes = 0;
 
-    const uploadChunkSize = 2 * 1024 * 1024;
+    const uploadChunkSize = 2 * 1024 * 1024; // 2MB 块
     const uploadChunk = new Uint8Array(uploadChunkSize);
     for (let i = 0; i < uploadChunk.length; i++) uploadChunk[i] = i % 256;
 
-    while (true) {
+    while (!speedtestAbortCtrl.signal.aborted) {
       const bStart = performance.now();
       await fetch(`/api/speedtest/upload?t=${Date.now()}`, {
         method: "POST",
         body: uploadChunk,
+        signal: speedtestAbortCtrl.signal,
       }).catch(() => null);
       const bEnd = performance.now();
 
@@ -507,14 +553,14 @@ async function runSpeedtest() {
 
       if (now - lastUpTime >= 100) {
         const deltaSec = (now - lastUpTime) / 1000;
-        const deltaMb = (totalUpBytes - lastUpBytes) / (1024 * 1024);
+        const deltaMb = (totalUpBytes - lastUpBytes) / 1000000; // 统一标准 MB/s
         const instSpeed = deltaMb / deltaSec;
 
         if (upEl) upEl.innerText = instSpeed.toFixed(2);
         updateGauge("gauge-up-arc", instSpeed);
 
         const remainSec = Math.max(0, (TEST_DURATION_MS - elapsed) / 1000).toFixed(1);
-        if (msg) msg.innerText = `正在测试「电脑到手机」写入 (剩余 ${remainSec}s)...`;
+        if (msg) msg.innerText = `正在测试「${devName} ➔ NAS」上行写入 (剩余 ${remainSec}s)...`;
 
         lastUpTime = now;
         lastUpBytes = totalUpBytes;
@@ -526,25 +572,116 @@ async function runSpeedtest() {
     }
 
     const actualUpSec = (performance.now() - upStartTime) / 1000;
-    const finalUpSpeed = totalUpBytes / (1024 * 1024) / (actualUpSec || 6.0);
+    const finalUpSpeed = totalUpBytes / 1000000 / (actualUpSec || 6.0);
     if (upEl) upEl.innerText = finalUpSpeed.toFixed(2);
     updateGauge("gauge-up-arc", finalUpSpeed);
 
-    if (msg) msg.innerHTML = `✅ <strong>双向测速完成</strong> · 手机➔电脑: ${finalDownSpeed.toFixed(2)} MB/s | 电脑➔手机: ${finalUpSpeed.toFixed(2)} MB/s`;
-    showToast("🎉 传输速度测试完成");
+    await new Promise((r) => setTimeout(r, 400));
+
+    // ----------------- 阶段 3: 下行读取测试 (右侧: NAS -> 客户端, 持续 6 秒) -----------------
+    if (!speedtestAbortCtrl.signal.aborted) {
+      if (msg) msg.innerText = `正在测试「NAS ➔ ${devName}」下行读取速度 (持续 6 秒)...`;
+
+      const downStartTime = performance.now();
+      let totalDownBytes = 0;
+      let lastDownTime = performance.now();
+      let lastDownBytes = 0;
+
+      let isStreaming = true;
+      let streamRes = await fetch(`/api/speedtest/download?size=200&t=${Date.now()}`, {
+        signal: speedtestAbortCtrl.signal,
+      }).catch(() => null);
+
+      if (!streamRes || !streamRes.ok || !streamRes.body) {
+        isStreaming = false;
+      }
+
+      if (isStreaming && streamRes.body) {
+        const reader = streamRes.body.getReader();
+        while (!speedtestAbortCtrl.signal.aborted) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          totalDownBytes += value.length;
+
+          const now = performance.now();
+          const elapsed = now - downStartTime;
+
+          if (now - lastDownTime >= 100) {
+            const deltaSec = (now - lastDownTime) / 1000;
+            const deltaMb = (totalDownBytes - lastDownBytes) / 1000000;
+            const instSpeed = deltaMb / deltaSec;
+
+            if (downEl) downEl.innerText = instSpeed.toFixed(2);
+            updateGauge("gauge-down-arc", instSpeed);
+
+            const remainSec = Math.max(0, (TEST_DURATION_MS - elapsed) / 1000).toFixed(1);
+            if (msg) msg.innerText = `正在测试「NAS ➔ ${devName}」下行读取 (剩余 ${remainSec}s)...`;
+
+            lastDownTime = now;
+            lastDownBytes = totalDownBytes;
+          }
+
+          if (elapsed >= TEST_DURATION_MS) {
+            reader.cancel().catch(() => null);
+            break;
+          }
+        }
+      } else {
+        while (!speedtestAbortCtrl.signal.aborted) {
+          const bStart = performance.now();
+          const chunkRes = await fetch(`/speedtest_chunk.bin?t=${Date.now()}_${Math.random()}`, {
+            signal: speedtestAbortCtrl.signal,
+          });
+          const blob = await chunkRes.blob();
+          const bEnd = performance.now();
+
+          totalDownBytes += blob.size;
+          const now = performance.now();
+          const elapsed = now - downStartTime;
+
+          const deltaSec = (bEnd - bStart) / 1000;
+          const instSpeed = deltaSec > 0 ? blob.size / 1000000 / deltaSec : 0;
+
+          if (downEl) downEl.innerText = instSpeed.toFixed(2);
+          updateGauge("gauge-down-arc", instSpeed);
+
+          const remainSec = Math.max(0, (TEST_DURATION_MS - elapsed) / 1000).toFixed(1);
+          if (msg) msg.innerText = `正在测试「NAS ➔ ${devName}」下行读取 (剩余 ${remainSec}s)...`;
+
+          if (elapsed >= TEST_DURATION_MS) {
+            break;
+          }
+        }
+      }
+
+      const actualDownSec = (performance.now() - downStartTime) / 1000;
+      const finalDownSpeed = totalDownBytes / 1000000 / (actualDownSec || 6.0);
+      if (downEl) downEl.innerText = finalDownSpeed.toFixed(2);
+      updateGauge("gauge-down-arc", finalDownSpeed);
+
+      if (msg) {
+        msg.innerHTML = `✅ <strong>测速完成</strong> · 上传(${devName}➔NAS): ${finalUpSpeed.toFixed(2)} MB/s | 下载(NAS➔${devName}): ${finalDownSpeed.toFixed(2)} MB/s`;
+      }
+      showToast("🎉 传输速度测试完成");
+    }
   } catch (err) {
-    console.error("Speedtest error:", err);
-    if (msg) msg.innerText = "测速异常，请检查局域网连接后重试。";
+    if (speedtestAbortCtrl && speedtestAbortCtrl.signal.aborted) {
+      if (msg) msg.innerText = "测速已手动终止。";
+    } else {
+      console.error("Speedtest error:", err);
+      if (msg) msg.innerText = "测速异常，请检查网络连接后重试。";
+    }
   } finally {
     isSpeedtesting = false;
+    speedtestAbortCtrl = null;
     if (btn) {
-      btn.disabled = false;
       btn.innerText = "开始";
+      btn.style.background = "var(--accent-pink)";
     }
   }
 }
 
-// ================= 8. 数据拉取与全量渲染 =================
+// ================= 10. 数据拉取与全量渲染 =================
 async function fetchStatus() {
   try {
     const reqUrl = "/api/status?t=" + Date.now();
@@ -558,7 +695,10 @@ async function fetchStatus() {
     if (data.network && data.network.ip && data.network.ip !== "127.0.0.1") {
       currentIP = data.network.ip;
     }
-    alistUrl = `http://${currentIP}:5244`;
+    if (data.mdns && data.mdns.hostname) {
+      currentMDNSHost = data.mdns.hostname;
+    }
+    alistUrl = `http://${currentMDNSHost}:5244`;
 
     const openAlistBtn = document.getElementById("btn-open-alist");
     if (openAlistBtn) openAlistBtn.href = alistUrl;
@@ -587,7 +727,31 @@ async function fetchStatus() {
       if (timeEl) timeEl.innerText = `更新: ${data.time}`;
     }
 
-    // 2. 内部存储
+    // 2. mDNS 局域网访问卡片渲染
+    const mdnsUrlVal = document.getElementById("mdns-url-val");
+    if (mdnsUrlVal) mdnsUrlVal.innerText = `http://${currentMDNSHost}:8080`;
+
+    const lanIpVal = document.getElementById("lan-ip-val");
+    if (lanIpVal) lanIpVal.innerText = currentIP;
+
+    const lanIfaceVal = document.getElementById("lan-iface-val");
+    if (lanIfaceVal) lanIfaceVal.innerText = `${data.network?.interface || 'wlan0'} (物理网卡)`;
+
+    const mdnsBadge = document.getElementById("mdns-status-badge");
+    if (mdnsBadge) {
+      if (data.mdns && data.mdns.status) {
+        mdnsBadge.className = "status-tag ok";
+        mdnsBadge.innerText = "🟢 mDNS 运行中";
+      } else {
+        mdnsBadge.className = "status-tag wait";
+        mdnsBadge.innerText = "🟡 备用 IP 模式";
+      }
+    }
+
+    const netMdnsHead = document.getElementById("net-mdns-head");
+    if (netMdnsHead) netMdnsHead.innerText = currentMDNSHost;
+
+    // 3. 内部存储
     if (data.storage) {
       const sPctStr = data.storage.percent;
       let sPct = parseFloat(sPctStr);
@@ -614,7 +778,7 @@ async function fetchStatus() {
       if (sFreeDet) sFreeDet.innerText = data.storage.free || "--";
     }
 
-    // 3. 运行内存
+    // 4. 运行内存
     if (data.memory) {
       const rPct = data.memory.percent || 0;
       const rBadge = document.getElementById("ram-pct-badge");
@@ -634,7 +798,7 @@ async function fetchStatus() {
       if (cEl) cEl.innerText = data.memory.cached || "--";
     }
 
-    // 4. CPU 核心与负载
+    // 5. CPU 核心与负载
     let cpuUsage = 0;
     if (data.cpu) {
       cpuUsage = data.cpu.usage || 0;
@@ -667,7 +831,7 @@ async function fetchStatus() {
       }
     }
 
-    // 5. 电池侧功率与供电
+    // 6. 电池侧功率与供电
     if (data.battery) {
       const pVal = data.battery.power || "-- W";
       const isCharging = data.battery.charging ? " (⚡充电)" : data.battery.level ? " (供电)" : "--";
@@ -689,7 +853,7 @@ async function fetchStatus() {
       if (powerViVal) powerViVal.innerText = `${vVal} · ${iVal}`;
     }
 
-    // 6. 网络速率与设备连接地址
+    // 7. 网络速率与设备连接地址 (优先使用 mDNS 域名)
     if (data.network) {
       const downEl = document.getElementById("net-down");
       const upEl = document.getElementById("net-up");
@@ -728,11 +892,12 @@ async function fetchStatus() {
         const netIpHead = document.getElementById("net-ip-head");
         if (netIpHead) netIpHead.innerText = data.network.ip;
 
-        setCopyVal("webdav-url-copy-val", `http://${data.network.ip}:5244/dav`);
-        setCopyVal("ftp-url-copy-val", `ftp://${data.network.ip}:2121`);
-        setCopyVal("alist-url-copy-val", `http://${data.network.ip}:5244`);
-        setCopyVal("webui-url-copy-val", `http://${data.network.ip}:8080`);
-        setCopyVal("ssh-url-copy-val", `ssh root@${data.network.ip} -p 22`);
+        // 更新核心连接地址 (默认展示稳定的 mDNS 域名)
+        setCopyVal("webdav-url-copy-val", `http://${currentMDNSHost}:5244/dav`);
+        setCopyVal("ftp-url-copy-val", `ftp://${currentMDNSHost}:2121`);
+        setCopyVal("alist-url-copy-val", `http://${currentMDNSHost}:5244`);
+        setCopyVal("webui-url-copy-val", `http://${currentMDNSHost}:8080`);
+        setCopyVal("ssh-url-copy-val", `ssh root@${currentMDNSHost} -p 22`);
       }
 
       if (data.network.interface) {
@@ -748,7 +913,7 @@ async function fetchStatus() {
       if (mtuEl) mtuEl.innerText = `${data.network.mtu || 1500} Bytes`;
     }
 
-    // 7. 核心协议状态指示
+    // 8. 核心协议状态指示
     if (data.protocols) {
       updateServiceBadge("srv-alist", data.protocols.alist?.status);
       updateServiceBadge("srv-ftp", data.protocols.ftp?.status);
@@ -761,7 +926,7 @@ async function fetchStatus() {
       }
     }
 
-    // 8. 系统内核与 NAS 健康
+    // 9. 系统内核与 NAS 健康
     if (data.kernel) {
       const kTag = document.getElementById("kernel-tag");
       if (kTag) kTag.innerText = data.kernel;

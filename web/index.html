@@ -7,7 +7,7 @@
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
   <title>PocketNAS Pro · 口袋 NAS 全景控制台</title>
-  <link rel="stylesheet" href="style.css?v=20260823_280">
+  <link rel="stylesheet" href="style.css?v=20260823_310">
 </head>
 <body>
 
@@ -74,6 +74,43 @@
       <!-- ================= TAB 1: 首页全景极客控制台 ================= -->
       <div id="tab-overview" class="tab-pane active">
         
+        <!-- 🌟 局域网极速访问卡片 (mDNS 域名直连 · 无需记忆 IP) -->
+        <section class="glass-panel" style="border: 1px solid var(--glass-border-hover);">
+          <div class="panel-head">
+            <div class="panel-title">
+              <span class="icon" style="color:var(--accent-cyan);">🌐</span><span>局域网访问 (mDNS 域名直连)</span>
+            </div>
+            <span class="status-tag ok" id="mdns-status-badge">🟢 mDNS 运行中</span>
+          </div>
+
+          <div style="display:flex; flex-direction:column; gap:6px; margin-top:3px;">
+            <div class="device-url-box" style="background:rgba(0, 242, 254, 0.08); border-color:rgba(0, 242, 254, 0.3);">
+              <div>
+                <div style="font-size:10px; color:var(--text-muted);">主访问入口 (无需记忆 IP · 切换 Wi-Fi/热点不失效)</div>
+                <div class="code" id="mdns-url-val" style="font-size:13.5px; font-weight:800; color:var(--accent-cyan);">http://pocketnas.local:8080</div>
+              </div>
+              <div style="display:flex; gap:6px;">
+                <button class="btn-device-copy" onclick="copyText(document.getElementById('mdns-url-val').innerText, 'mDNS 域名')">📋 复制访问地址</button>
+                <button class="btn-device-copy" style="background:linear-gradient(135deg, #8b5cf6, #00f2fe);" onclick="openQRModal()">📱 二维码</button>
+              </div>
+            </div>
+
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:6px;">
+              <div class="matrix-cell">
+                <span class="lbl">备用局域网 IP (当前 IP)</span>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-top:2px;">
+                  <span class="num" id="lan-ip-val" style="font-size:11.5px; color:var(--accent-green);">10.x.x.x</span>
+                  <button class="btn-mini-copy" onclick="copyText(document.getElementById('lan-ip-val').innerText, '当前 IP')">复制 IP</button>
+                </div>
+              </div>
+              <div class="matrix-cell">
+                <span class="lbl">绑定物理网卡</span>
+                <span class="num" id="lan-iface-val" style="font-size:11.5px;">wlan0 (Wi-Fi)</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
         <!-- 第一行：4 列核心硬件矩阵 -->
         <section class="grid-4-dense">
           
@@ -140,7 +177,7 @@
             </div>
           </div>
 
-          <!-- 4. 电池侧功率与供电状态 (P0: 真实标注) -->
+          <!-- 4. 电池侧功率与供电状态 -->
           <div class="glass-panel">
             <div class="panel-head">
               <div class="panel-title">
@@ -266,8 +303,8 @@
                 <div class="action-tile-btn" onclick="switchTab('tab-network')">
                   <span class="icon">🌐</span><span>连接</span>
                 </div>
-                <div class="action-tile-btn" onclick="copyText(window.location.origin, 'Dashboard 地址')">
-                  <span class="icon">📋</span><span>网址</span>
+                <div class="action-tile-btn" onclick="openQRModal()">
+                  <span class="icon">📱</span><span>扫码</span>
                 </div>
               </div>
             </div>
@@ -317,7 +354,7 @@
             <div class="panel-title">
               <span class="icon">📱</span><span>全设备专属连接终端 (One-Click Multi-Device Connect)</span>
             </div>
-            <span class="status-tag ok">当前 IP: <strong id="net-ip-head">10.x.x.x</strong></span>
+            <span class="status-tag ok">域名: <strong id="net-mdns-head">pocketnas.local</strong></span>
           </div>
 
           <div class="device-card-grid" style="margin-top:4px;">
@@ -329,13 +366,13 @@
                 <span class="status-tag ok">4K 原画原盘</span>
               </div>
               <p style="font-size:11px; color:var(--text-sub);">
-                • <strong>Mac 访达</strong>：按 <code>Cmd + K</code> 粘贴此链接，直接挂载为本地磁盘；<br>
-                • <strong>Windows</strong>：此电脑 ➔ 映射网络驱动器，输入此链接变成 Z: 盘；<br>
+                • <strong>Mac 访达</strong>：按 <code>Cmd + K</code> 输入域名直连挂载；<br>
+                • <strong>Windows</strong>：映射网络驱动器输入此链接变成 Z: 盘；<br>
                 • <strong>电视 / 手机</strong>：在 Kodi、影视仓、Infuse 中添加 WebDAV 源。
               </p>
               <div class="device-url-box">
-                <span class="code" id="webdav-url-copy-val">http://10.x.x.x:5244/dav</span>
-                <button class="btn-device-copy" onclick="copyText(document.getElementById('webdav-url-copy-val').innerText, 'WebDAV 端点')">📋 复制 WebDAV 链接</button>
+                <span class="code" id="webdav-url-copy-val">http://pocketnas.local:5244/dav</span>
+                <button class="btn-device-copy" onclick="copyText(document.getElementById('webdav-url-copy-val').innerText, 'WebDAV 域名链接')">📋 复制域名链接</button>
               </div>
             </div>
 
@@ -349,8 +386,8 @@
                 手机开机常驻轻量 FTP 服务，支持匿名免密秒登，内置 Root 边界与软链接防逃逸保护：
               </p>
               <div class="device-url-box">
-                <span class="code" id="ftp-url-copy-val">ftp://10.x.x.x:2121</span>
-                <button class="btn-device-copy" style="background:linear-gradient(135deg, #059669, #10b981);" onclick="copyText(document.getElementById('ftp-url-copy-val').innerText, 'FTP 链接')">📋 复制 FTP 链接</button>
+                <span class="code" id="ftp-url-copy-val">ftp://pocketnas.local:2121</span>
+                <button class="btn-device-copy" style="background:linear-gradient(135deg, #059669, #10b981);" onclick="copyText(document.getElementById('ftp-url-copy-val').innerText, 'FTP 域名链接')">📋 复制 FTP 链接</button>
               </div>
             </div>
 
@@ -364,7 +401,7 @@
                 网页端聚合网盘与本地存储管理，支持在线音视频预览与多源挂载：
               </p>
               <div class="device-url-box">
-                <span class="code" id="alist-url-copy-val">http://10.x.x.x:5244</span>
+                <span class="code" id="alist-url-copy-val">http://pocketnas.local:5244</span>
                 <div style="display:flex; gap:4px;">
                   <button class="btn-device-copy" onclick="copyText(document.getElementById('alist-url-copy-val').innerText, 'AList 链接')">📋 复制</button>
                   <a class="btn-device-copy" id="btn-open-alist-net" href="http://127.0.0.1:5244" target="_blank" style="text-decoration:none; background:rgba(0,242,254,0.15); color:var(--accent-cyan); border:1px solid rgba(0,242,254,0.3);">↗ 打开</a>
@@ -379,10 +416,10 @@
                 <span class="subtitle">:8080</span>
               </div>
               <p style="font-size:11px; color:var(--text-muted);">
-                局域网内任意设备直接在浏览器打开即可查看全景硬件与控制台：
+                局域网内任意设备在浏览器输入 <code>pocketnas.local:8080</code> 即可免 IP 访问：
               </p>
               <div class="device-url-box">
-                <span class="code" id="webui-url-copy-val">http://10.x.x.x:8080</span>
+                <span class="code" id="webui-url-copy-val">http://pocketnas.local:8080</span>
                 <button class="btn-device-copy" onclick="copyText(document.getElementById('webui-url-copy-val').innerText, '控制台链接')">📋 复制</button>
               </div>
             </div>
@@ -397,7 +434,7 @@
                 在 Termius、PuTTY 或命令行中通过 SSH 远程访问 Android Root Shell：
               </p>
               <div class="device-url-box">
-                <span class="code" id="ssh-url-copy-val">ssh root@10.x.x.x -p 22</span>
+                <span class="code" id="ssh-url-copy-val">ssh root@pocketnas.local -p 22</span>
                 <button class="btn-device-copy" onclick="copyText(document.getElementById('ssh-url-copy-val').innerText, 'SSH 命令')">📋 复制</button>
               </div>
             </div>
@@ -409,7 +446,7 @@
                 <span class="subtitle">Wi-Fi 6</span>
               </div>
               <div style="display:grid; grid-template-columns: 1fr 1fr; gap:4px; margin-top:2px;">
-                <div class="matrix-cell"><span class="lbl">默认网关</span><span class="num" id="net-gw-val">--</span></div>
+                <div class="matrix-cell"><span class="lbl">当前 IP</span><span class="num" id="net-ip-head" style="color:var(--accent-green);">--</span></div>
                 <div class="matrix-cell"><span class="lbl">MTU 大小</span><span class="num" id="net-mtu-val">1500 Bytes</span></div>
                 <div class="matrix-cell"><span class="lbl">MAC 地址</span><span class="num" id="net-mac-val" style="font-size:10px;">--</span></div>
                 <div class="matrix-cell"><span class="lbl">链路错包/丢包</span><span class="num" style="color:var(--accent-green);">0 / 0</span></div>
@@ -421,52 +458,54 @@
 
       </div>
 
-      <!-- ================= TAB 4: ⚡ 传输速度测试 (1:1 像素级复刻) ================= -->
+      <!-- ================= TAB 4: ⚡ 传输速度测试 (语义与动态客户端修复) ================= -->
       <div id="tab-speedtest" class="tab-pane">
         
         <div class="speed-modal-card">
           
           <div class="speed-modal-head">
-            <div class="speed-modal-title">传输速度测试</div>
+            <div class="speed-modal-title">传输速度测试 (当前设备 ↔ NAS)</div>
             <div class="speed-modal-close" onclick="switchTab('tab-overview')">✕</div>
           </div>
 
           <div class="speed-latency-grid">
             <div class="speed-latency-col">
-              <div class="label">Ping</div>
+              <div class="label">Ping 延迟</div>
               <div class="value"><span id="st-ping-val">0</span><span class="unit">ms</span></div>
             </div>
             <div class="speed-latency-col">
-              <div class="label">Jitter</div>
+              <div class="label">Jitter 抖动</div>
               <div class="value"><span id="st-jitter-val">0</span><span class="unit">ms</span></div>
             </div>
           </div>
 
           <div class="speed-gauges-grid">
+            <!-- 1. 左侧仪表盘: 客户端 -> NAS (上传写入) -->
             <div class="speed-gauge-card">
-              <div class="speed-gauge-title">手机到电脑</div>
-              <div class="speed-dial-wrapper">
-                <svg class="speed-dial-svg" viewBox="0 0 200 115">
-                  <path class="gauge-track" d="M 25,100 A 75,75 0 0,1 175,100" />
-                  <path id="gauge-down-arc" class="gauge-progress" d="M 25,100 A 75,75 0 0,1 175,100" />
-                </svg>
-                <div class="speed-dial-center">
-                  <div class="speed-dial-num" id="st-down-val">0</div>
-                  <div class="speed-dial-unit">MB/s</div>
-                  <div class="speed-dial-bar"></div>
-                </div>
-              </div>
-            </div>
-
-            <div class="speed-gauge-card">
-              <div class="speed-gauge-title">电脑到手机</div>
+              <div class="speed-gauge-title" id="st-left-label">当前设备 ➔ NAS (上传)</div>
               <div class="speed-dial-wrapper">
                 <svg class="speed-dial-svg" viewBox="0 0 200 115">
                   <path class="gauge-track" d="M 25,100 A 75,75 0 0,1 175,100" />
                   <path id="gauge-up-arc" class="gauge-progress" d="M 25,100 A 75,75 0 0,1 175,100" />
                 </svg>
                 <div class="speed-dial-center">
-                  <div class="speed-dial-num" id="st-up-val">0</div>
+                  <div class="speed-dial-num" id="st-up-val">0.00</div>
+                  <div class="speed-dial-unit">MB/s</div>
+                  <div class="speed-dial-bar"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 2. 右侧仪表盘: NAS -> 客户端 (下载读取) -->
+            <div class="speed-gauge-card">
+              <div class="speed-gauge-title" id="st-right-label">NAS ➔ 当前设备 (下载)</div>
+              <div class="speed-dial-wrapper">
+                <svg class="speed-dial-svg" viewBox="0 0 200 115">
+                  <path class="gauge-track" d="M 25,100 A 75,75 0 0,1 175,100" />
+                  <path id="gauge-down-arc" class="gauge-progress" d="M 25,100 A 75,75 0 0,1 175,100" />
+                </svg>
+                <div class="speed-dial-center">
+                  <div class="speed-dial-num" id="st-down-val">0.00</div>
                   <div class="speed-dial-unit">MB/s</div>
                   <div class="speed-dial-bar"></div>
                 </div>
@@ -475,7 +514,7 @@
           </div>
 
           <div class="speed-footer-action">
-            <button class="btn-speed-pink" id="btn-start-speedtest" onclick="runSpeedtest()">开始</button>
+            <button class="btn-speed-pink" id="btn-start-speedtest" onclick="toggleSpeedtest()">开始</button>
             <div class="speed-live-msg">
               <span class="dot"></span>
               <span id="st-status-msg">准备就绪 · 双向测速每次持续 6 秒以上</span>
@@ -507,11 +546,32 @@
 
   </div>
 
+  <!-- 📱 二维码弹窗 (纯前端 Canvas 内存生成，0 磁盘 I/O) -->
+  <div id="qr-modal-overlay" class="modal-overlay" onclick="closeQRModal(event)">
+    <div class="modal-card" onclick="event.stopPropagation()">
+      <div class="panel-head">
+        <div class="panel-title"><span class="icon">📱</span><span>扫码极速直连 PocketNAS</span></div>
+        <div class="speed-modal-close" onclick="closeQRModal()">✕</div>
+      </div>
+      <div style="display:flex; flex-direction:column; align-items:center; gap:12px; padding:12px 0;">
+        <div id="qrcode-box" style="background:#ffffff; padding:12px; border-radius:12px; box-shadow:0 4px 16px rgba(0,0,0,0.3);">
+          <canvas id="qr-canvas" width="180" height="180"></canvas>
+        </div>
+        <div style="font-size:13px; font-weight:700; color:var(--accent-cyan);" id="qr-modal-url">http://pocketnas.local:8080</div>
+        <div style="display:flex; gap:8px;">
+          <button class="btn-device-copy" onclick="copyText(document.getElementById('qr-modal-url').innerText, '访问地址')">📋 复制链接</button>
+          <button class="btn-device-copy" style="background:rgba(255,255,255,0.1); color:var(--text-main);" onclick="toggleQRTarget()">🔄 切换为 IP 二维码</button>
+        </div>
+        <div style="font-size:10.5px; color:var(--text-muted); text-align:center;">手机/平板相机或微信扫码即可免输 IP 直达控制台</div>
+      </div>
+    </div>
+  </div>
+
   <div id="toast" class="toast-bubble">
     <span>✅</span>
     <span id="toast-text">已复制到剪贴板</span>
   </div>
 
-  <script src="app.js?v=20260823_280"></script>
+  <script src="app.js?v=20260823_310"></script>
 </body>
 </html>

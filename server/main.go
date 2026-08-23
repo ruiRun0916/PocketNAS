@@ -19,15 +19,21 @@ import (
 )
 
 // =========================================================
-// PocketNAS Pro v3.0 - P0/P1/P2 Full Hardened Architecture
+// PocketNAS Pro v3.2 - Hardened In-Memory Daemon & True mDNS
 // =========================================================
 
+type MDNSConfig struct {
+	Enabled  bool   `json:"enabled"`
+	Hostname string `json:"hostname"`
+}
+
 type Config struct {
-	Port           int    `json:"port"`
-	FtpPort        int    `json:"ftp_port"`
-	RefreshSeconds int    `json:"refresh_seconds"`
-	AppName        string `json:"app_name"`
-	StoragePath    string `json:"storage_path"`
+	Port           int        `json:"port"`
+	FtpPort        int        `json:"ftp_port"`
+	RefreshSeconds int        `json:"refresh_seconds"`
+	AppName        string     `json:"app_name"`
+	StoragePath    string     `json:"storage_path"`
+	MDNS           MDNSConfig `json:"mdns"`
 }
 
 type StorageInfo struct {
@@ -83,6 +89,16 @@ type ProtocolStatus struct {
 	URL    string `json:"url"`
 }
 
+type MDNSStatusInfo struct {
+	Enabled   bool   `json:"enabled"`
+	Hostname  string `json:"hostname"`
+	URL       string `json:"url"`
+	IP        string `json:"ip"`
+	Interface string `json:"interface"`
+	Status    bool   `json:"status"`
+	Message   string `json:"message"`
+}
+
 type BatteryInfo struct {
 	Level       string `json:"level"`
 	Charging    bool   `json:"charging"`
@@ -105,18 +121,18 @@ type StatusSnapshot struct {
 	CPU         CPUInfo                   `json:"cpu"`
 	Temperature TempInfo                  `json:"temperature"`
 	Network     NetworkInfo               `json:"network"`
+	MDNS        MDNSStatusInfo            `json:"mdns"`
 	Protocols   map[string]ProtocolStatus `json:"protocols"`
 	Battery     BatteryInfo               `json:"battery"`
 	Time        string                    `json:"time"`
 }
 
 var (
-	currentSnapshot  StatusSnapshot
-	snapshotMu       sync.RWMutex
-	baseDir          string
-	serverConfig     Config
-	speedtestMu      sync.Mutex
-	speedtestRunning bool
+	currentSnapshot StatusSnapshot
+	snapshotMu      sync.RWMutex
+	baseDir         string
+	serverConfig    Config
+	mdnsInstance    *MDNSServer
 )
 
 func getExecutableDir() string {
@@ -134,6 +150,10 @@ func loadConfig(bDir string) Config {
 		RefreshSeconds: 2,
 		AppName:        "PocketNAS Pro",
 		StoragePath:    "/data/media/0",
+		MDNS: MDNSConfig{
+			Enabled:  true,
+			Hostname: "pocketnas",
+		},
 	}
 
 	confPaths := []string{
@@ -191,10 +211,6 @@ func formatKB(kb uint64) string {
 	}
 	return fmt.Sprintf("%d MB", kb/1024)
 }
-
-// =========================================================
-// 🚀 P1: 进程内高性能无 Fork 监控采集引擎
-// =========================================================
 
 func startMetricsCollector(storagePath string) {
 	snapshotMu.Lock()
@@ -479,31 +495,11 @@ func startMetricsCollector(storagePath string) {
 					isCharging = (st == "Charging" || st == "Full")
 				}
 
-				var curIP string = "127.0.0.1"
-				var curMAC string = "--"
-				if ifaces, err := net.Interfaces(); err == nil {
-					for _, iface := range ifaces {
-						if iface.Flags&net.FlagUp != 0 && iface.Flags&net.FlagLoopback == 0 {
-							if addrs, err := iface.Addrs(); err == nil {
-								for _, addr := range addrs {
-									var ip net.IP
-									switch v := addr.(type) {
-									case *net.IPNet:
-										ip = v.IP
-									case *net.IPAddr:
-										ip = v.IP
-									}
-									if ip != nil && ip.To4() != nil && !ip.IsLoopback() {
-										curIP = ip.String()
-										curMAC = iface.HardwareAddr.String()
-										if iface.Name == "wlan0" || iface.Name == "eth0" {
-											break
-										}
-									}
-								}
-							}
-						}
-					}
+				lanIP, lanIface := getPhysicalLANIP()
+				curIP := lanIP.String()
+				curMAC := "--"
+				if ifaceObj, err := net.InterfaceByName(lanIface); err == nil {
+					curMAC = ifaceObj.HardwareAddr.String()
 				}
 
 				tcpPorts := make(map[string]bool)
@@ -523,6 +519,15 @@ func startMetricsCollector(storagePath string) {
 					}
 				}
 
+				var mdnsOk bool
+				var mdnsHost string = "pocketnas.local"
+				var mdnsIP string = curIP
+				var mdnsIf string = lanIface
+				var mdnsMsg string = "Running"
+				if mdnsInstance != nil {
+					mdnsOk, mdnsHost, mdnsIP, mdnsIf, mdnsMsg = mdnsInstance.GetStatus()
+				}
+
 				snapshotMu.Lock()
 				currentSnapshot.Temperature.CPU = cpuT
 				currentSnapshot.Temperature.Battery = batT
@@ -533,6 +538,16 @@ func startMetricsCollector(storagePath string) {
 				currentSnapshot.Battery.Charging = isCharging
 				currentSnapshot.Network.IP = curIP
 				currentSnapshot.Network.Mac = curMAC
+
+				currentSnapshot.MDNS = MDNSStatusInfo{
+					Enabled:   serverConfig.MDNS.Enabled,
+					Hostname:  mdnsHost,
+					URL:       fmt.Sprintf("http://%s:%d", mdnsHost, serverConfig.Port),
+					IP:        mdnsIP,
+					Interface: mdnsIf,
+					Status:    mdnsOk,
+					Message:   mdnsMsg,
+				}
 
 				currentSnapshot.Protocols["webui"] = ProtocolStatus{Name: "PocketNAS 控制台", Port: 8080, Status: tcpPorts["1F90"], URL: fmt.Sprintf("http://%s:8080", curIP)}
 				currentSnapshot.Protocols["alist"] = ProtocolStatus{Name: "AList / OpenList", Port: 5244, Status: tcpPorts["147C"], URL: fmt.Sprintf("http://%s:5244", curIP)}
@@ -992,45 +1007,34 @@ func (s *FTPSession) handleSTOR(arg string) {
 }
 
 // =========================================================
-// P2: 测速并发互斥锁 (限制最多 1 个客户端同时测速，防止打爆内存)
-// =========================================================
-
-func acquireSpeedtest() bool {
-	speedtestMu.Lock()
-	defer speedtestMu.Unlock()
-	if speedtestRunning {
-		return false
-	}
-	speedtestRunning = true
-	return true
-}
-
-func releaseSpeedtest() {
-	speedtestMu.Lock()
-	speedtestRunning = false
-	speedtestMu.Unlock()
-}
-
-// =========================================================
-// 主服务与 HTTP / 内存状态 API / 测速
+// 主服务与 HTTP / 内存状态 API / mDNS 挂载
 // =========================================================
 
 func main() {
 	baseDir = getExecutableDir()
 	serverConfig = loadConfig(baseDir)
 
-	// 写入 PID
+	// 1. 写入 PID
 	pidPath := filepath.Join(baseDir, "../data/pocket_nas.pid")
 	if dataDir, err := filepath.Abs(filepath.Dir(pidPath)); err == nil {
 		_ = os.MkdirAll(dataDir, 0755)
 		_ = os.WriteFile(pidPath, []byte(strconv.Itoa(os.Getpid())), 0644)
 	}
 
-	// 启动进程内采集器
+	// 2. 启动进程内零磁盘写入监控采集引擎
 	startMetricsCollector(serverConfig.StoragePath)
 
-	// 启动单一原生安全 FTP 服务端
+	// 3. 启动原生零依赖安全 FTP 服务端
 	startFTPServer(serverConfig.FtpPort, serverConfig.StoragePath)
+
+	// 4. 启动原生零依赖 mDNS 域名响应引擎 (默认: pocketnas.local)
+	if serverConfig.MDNS.Enabled {
+		mdnsInstance = newMDNSServer(serverConfig.MDNS.Hostname, serverConfig.Port)
+		mdnsInstance.Start()
+	}
+
+	// 5. 注册测速专属路由与并发控制器
+	registerSpeedtestHandlers()
 
 	webDirCandidates := []string{
 		filepath.Join(baseDir, "../web"),
@@ -1047,7 +1051,7 @@ func main() {
 		}
 	}
 
-	// 内存状态 API
+	// 6. 内存状态 API 接口 (/api/status)
 	http.HandleFunc("/api/status", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.Header().Set("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0")
@@ -1066,82 +1070,7 @@ func main() {
 		_, _ = w.Write(data)
 	})
 
-	// 测速：Ping
-	http.HandleFunc("/api/ping", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		w.Header().Set("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0")
-		w.Header().Set("Pragma", "no-cache")
-		w.WriteHeader(http.StatusOK)
-		_, _ = fmt.Fprintf(w, `{"pong":true,"time":%d}`, time.Now().UnixNano()/int64(time.Millisecond))
-	})
-
-	// 测速：下行流 (P2: 并发保护与超时隔离)
-	http.HandleFunc("/api/speedtest/download", func(w http.ResponseWriter, r *http.Request) {
-		if !acquireSpeedtest() {
-			w.WriteHeader(http.StatusTooManyRequests)
-			_, _ = io.WriteString(w, `{"status":"busy","message":"已有测速任务正在运行"}`)
-			return
-		}
-		defer releaseSpeedtest()
-
-		w.Header().Set("Content-Type", "application/octet-stream")
-		w.Header().Set("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0")
-		w.Header().Set("Pragma", "no-cache")
-
-		sizeMB := 150
-		if s := r.URL.Query().Get("size"); s != "" {
-			if n, err := strconv.Atoi(s); err == nil && n > 0 && n <= 1000 {
-				sizeMB = n
-			}
-		}
-
-		totalBytes := int64(sizeMB) * 1024 * 1024
-		chunk := make([]byte, 64*1024)
-		for i := range chunk {
-			chunk[i] = byte(i % 256)
-		}
-
-		w.Header().Set("Content-Length", strconv.FormatInt(totalBytes, 10))
-		w.WriteHeader(http.StatusOK)
-
-		var written int64
-		for written < totalBytes {
-			toWrite := int64(len(chunk))
-			if totalBytes-written < toWrite {
-				toWrite = totalBytes - written
-			}
-			n, err := w.Write(chunk[:toWrite])
-			written += int64(n)
-			if err != nil {
-				break
-			}
-			if f, ok := w.(http.Flusher); ok {
-				f.Flush()
-			}
-		}
-	})
-
-	// 测速：上行流 (P2: 512MB 限制与并发保护)
-	http.HandleFunc("/api/speedtest/upload", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		w.Header().Set("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0")
-		w.Header().Set("Pragma", "no-cache")
-
-		if r.Method == http.MethodOptions {
-			w.WriteHeader(http.StatusOK)
-			return
-		}
-
-		start := time.Now()
-		n, _ := io.Copy(io.Discard, io.LimitReader(r.Body, 512*1024*1024))
-		_ = r.Body.Close()
-		duration := time.Since(start)
-
-		w.WriteHeader(http.StatusOK)
-		_, _ = fmt.Fprintf(w, `{"status":"ok","received_bytes":%d,"duration_ms":%d}`, n, duration.Milliseconds())
-	})
-
-	// 静态文件托管
+	// 7. 静态文件托管
 	fs := http.FileServer(http.Dir(webDir))
 	http.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
@@ -1150,7 +1079,6 @@ func main() {
 		fs.ServeHTTP(w, r)
 	}))
 
-	// P2: 规范 HTTP Server 超时控制
 	server := &http.Server{
 		Addr:              ":" + strconv.Itoa(serverConfig.Port),
 		ReadHeaderTimeout: 10 * time.Second,

@@ -1,6 +1,6 @@
 id=pocket_nas
 name=口袋 NAS · PocketNAS Pro
-version=v1.8.0
-versionCode=180
+version=v3.0.0
+versionCode=300
 author=ruiRun0916
-description=修复大容量存储百分比 0% 溢出 Bug，全自适应功耗动态感知引擎，全景极致高密度排版。
+description=专项重构终极版 (P0/P1/P2)：链式防堆叠轮询 (2s/5s)，Canvas低CPU缓冲，HTTP超时与测速并发锁，0磁盘写入内存快照，原生安全FTP与WebDAV。

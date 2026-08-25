@@ -34,6 +34,14 @@ PocketNAS Pro 是一个专为 Android 设备（KernelSU / Magisk / APatch 环境
 - **多层解耦识别引擎**：直接从 `/proc/cpuinfo` 读取 ARM MIDR，结合 `/sys/devices/system/cpu/` 动态扫描并聚合 CPU 拓扑簇（Cluster），匹配高通骁龙全系、联发科天玑全系、Google Tensor、三星 Exynos 数据库。
 - **核心组平均利用率**：单次遍历 `/proc/stat` 同时计算各核心组（如 `A55 24% 4 Core`、`A78 61% 3 Core`、`X1 18% 1 Core`）的平均负载与系统负载。
 
+### 4. 🤝 配合常用推荐工具协同使用
+
+为满足更丰富的相册浏览与文件共享需求，推荐配合以下常用工具协同操作：
+
+1. **[[文件闪传](https://xiaolifaa.com/)](https://xiaolifaa.com/)**：界面简洁，非常适合在局域网内多设备间快速查看手机图片、相册媒体，以及日常文件的高速互传。
+2. **多系统工具箱**：由于目前技术原因暂未将完整 SMB 协议栈稳定内置于本模块中，如有 Root 权限且需要原生 Windows 网络邻居 SMB 共享的用户，推荐通过多系统工具箱单独开启 SMB 共享服务。
+
+
 ---
 
 ## 🌐 全生态跨端多设备联动体系（核心联动）

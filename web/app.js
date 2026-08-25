@@ -23,8 +23,16 @@ document.addEventListener("DOMContentLoaded", () => {
   initTabs();
   init3DTilt();
   initCanvasBuffers();
+  updateAlistLinks();
   startChainedPolling();
 });
+
+function updateAlistLinks() {
+  const btnOpenAlistNet = document.getElementById("btn-open-alist-net");
+  if (btnOpenAlistNet) btnOpenAlistNet.href = alistUrl;
+  const btnOpenAlist = document.getElementById("btn-open-alist");
+  if (btnOpenAlist) btnOpenAlist.href = alistUrl;
+}
 
 // ================= 1. 链式防堆叠轮询 (前台 2s / 后台 5s) =================
 function startChainedPolling() {
@@ -585,8 +593,11 @@ async function fetchStatus(isManual = false) {
 
     if (data.network && data.network.ip && data.network.ip !== "127.0.0.1") {
       currentIP = data.network.ip;
+    } else if (window.location.hostname && window.location.hostname !== "127.0.0.1" && window.location.hostname !== "localhost") {
+      currentIP = window.location.hostname;
     }
     alistUrl = `http://${currentIP}:5244`;
+    updateAlistLinks();
 
     // 1. 顶部 Header 动态设备型号识别
     if (data.device) {

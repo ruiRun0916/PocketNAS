@@ -74,7 +74,13 @@ if [ -n "$BB" ]; then
 fi
 sleep 2
 
-# 5. 启动主守护服务
+# 5. 开放 FTP/Web 端口及数据传输通道 (防止 VPN / 热点防火墙拦截)
+iptables -I INPUT -p tcp --dport 2121 -j ACCEPT 2>/dev/null
+iptables -I INPUT -p tcp --dport 20000:20050 -j ACCEPT 2>/dev/null
+iptables -I INPUT -p tcp --dport "$PORT" -j ACCEPT 2>/dev/null
+ip6tables -I INPUT -p tcp --dport 2121 -j ACCEPT 2>/dev/null
+
+# 6. 启动主守护服务
 start_daemon() {
     # 优先启动编译好的 Go 原生单二进制 (0-Fork, 0-Disk I/O)
     if [ -f "$MODDIR/server/nas_server" ] && [ -x "$MODDIR/server/nas_server" ]; then
@@ -105,7 +111,7 @@ start_daemon() {
 
 start_daemon
 
-# 6. 后台极低开销看门狗 (每 60 秒巡检一次，仅在进程真正缺失时拉起)
+# 7. 后台极低开销看门狗 (每 60 秒巡检一次，仅在进程真正缺失时拉起)
 (
     while true; do
         sleep 60

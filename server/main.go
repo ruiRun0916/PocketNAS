@@ -21,6 +21,7 @@ import (
 // =========================================================
 // PocketNAS Pro v3.2.0 - Universal Android Hardware & NAS Daemon
 // Pure Go · Zero-Fork In-Memory Metrics · Dynamic Battery & SoC
+// Dual Active/Passive Full VPN & Hotspot Compatible FTP Engine
 // =========================================================
 
 type Config struct {
@@ -237,7 +238,7 @@ func getPhysicalLANIP() (net.IP, string) {
 			}
 
 			if ip != nil && ip.To4() != nil && !ip.IsLoopback() {
-				if strings.HasPrefix(name, "wlan") || strings.HasPrefix(name, "eth") {
+				if strings.HasPrefix(name, "wlan") || strings.HasPrefix(name, "eth") || strings.HasPrefix(name, "ap") || strings.HasPrefix(name, "rndis") {
 					return ip.To4(), iface.Name
 				}
 				if fallbackIP == nil {
@@ -649,6 +650,7 @@ func startMetricsCollector(storagePath string) {
 
 // =========================================================
 // ⚡ 原生安全 FTP 服务端 (0.0.0.0:2121)
+// 完整支持 Passive (PASV / EPSV) 与 Active (PORT / EPRT) 双模式
 // =========================================================
 
 type FTPSession struct {
@@ -657,6 +659,7 @@ type FTPSession struct {
 	rootDir      string
 	cwd          string
 	dataListener net.Listener
+	activeAddr   string // "IP:Port" 用于主动模式 (PORT / EPRT)
 	binaryMode   bool
 	renameFrom   string
 	mu           sync.Mutex
@@ -739,7 +742,16 @@ func (s *FTPSession) safeResolvePath(userPath string, forCreation bool) (string,
 }
 
 func (s *FTPSession) handle() {
-	defer s.conn.Close()
+	defer func() {
+		s.mu.Lock()
+		if s.dataListener != nil {
+			s.dataListener.Close()
+			s.dataListener = nil
+		}
+		s.mu.Unlock()
+		s.conn.Close()
+	}()
+
 	s.send("220 PocketNAS Pro Secure FTP Server Ready.")
 
 	for {
@@ -767,7 +779,7 @@ func (s *FTPSession) handle() {
 		case "SYST":
 			s.send("215 UNIX Type: L8")
 		case "FEAT":
-			s.send("211-Features:\n UTF8\n SIZE\n PASV\n EPSV\n REST STREAM\n211 End")
+			s.send("211-Features:\r\n UTF8\r\n SIZE\r\n PASV\r\n EPSV\r\n EPRT\r\n REST STREAM\r\n211 End")
 		case "PWD", "XPWD":
 			s.send(fmt.Sprintf("257 \"%s\" is current directory.", s.cwd))
 		case "TYPE":
@@ -799,6 +811,10 @@ func (s *FTPSession) handle() {
 			s.handlePASV()
 		case "EPSV":
 			s.handleEPSV()
+		case "PORT":
+			s.handlePORT(arg)
+		case "EPRT":
+			s.handleEPRT(arg)
 		case "LIST", "NLST":
 			s.handleLIST(arg)
 		case "RETR":
@@ -909,12 +925,25 @@ func (s *FTPSession) handlePASV() {
 
 	if s.dataListener != nil {
 		s.dataListener.Close()
+		s.dataListener = nil
 	}
+	s.activeAddr = ""
 
-	l, err := net.Listen("tcp", ":0")
-	if err != nil {
-		s.send("425 Can't open passive connection.")
-		return
+	// 优先在 20000-20050 固定端口池中监听，提升 VPN/防火墙穿透率
+	var l net.Listener
+	var err error
+	for p := 20000; p <= 20050; p++ {
+		l, err = net.Listen("tcp", fmt.Sprintf("0.0.0.0:%d", p))
+		if err == nil {
+			break
+		}
+	}
+	if l == nil {
+		l, err = net.Listen("tcp", "0.0.0.0:0")
+		if err != nil {
+			s.send("425 Can't open passive connection.")
+			return
+		}
 	}
 	s.dataListener = l
 
@@ -924,10 +953,14 @@ func (s *FTPSession) handlePASV() {
 
 	host, _, _ := net.SplitHostPort(s.conn.LocalAddr().String())
 	ip := net.ParseIP(host)
-	if ip == nil || ip.IsLoopback() || ip.To4() == nil {
-		ip = net.ParseIP("127.0.0.1")
+	if ip == nil || ip.IsLoopback() || ip.To4() == nil || host == "0.0.0.0" {
+		lanIP, _ := getPhysicalLANIP()
+		ip = lanIP
 	}
 	ip4 := ip.To4()
+	if ip4 == nil {
+		ip4 = net.ParseIP("127.0.0.1").To4()
+	}
 
 	s.send(fmt.Sprintf("227 Entering Passive Mode (%d,%d,%d,%d,%d,%d)", ip4[0], ip4[1], ip4[2], ip4[3], p1, p2))
 }
@@ -938,12 +971,24 @@ func (s *FTPSession) handleEPSV() {
 
 	if s.dataListener != nil {
 		s.dataListener.Close()
+		s.dataListener = nil
 	}
+	s.activeAddr = ""
 
-	l, err := net.Listen("tcp", ":0")
-	if err != nil {
-		s.send("425 Can't open passive connection.")
-		return
+	var l net.Listener
+	var err error
+	for p := 20000; p <= 20050; p++ {
+		l, err = net.Listen("tcp", fmt.Sprintf("0.0.0.0:%d", p))
+		if err == nil {
+			break
+		}
+	}
+	if l == nil {
+		l, err = net.Listen("tcp", "0.0.0.0:0")
+		if err != nil {
+			s.send("425 Can't open passive connection.")
+			return
+		}
 	}
 	s.dataListener = l
 	port := l.Addr().(*net.TCPAddr).Port
@@ -951,23 +996,87 @@ func (s *FTPSession) handleEPSV() {
 	s.send(fmt.Sprintf("229 Entering Extended Passive Mode (|||%d|)", port))
 }
 
+// 主动模式 PORT 指令支持 (PORT h1,h2,h3,h4,p1,p2)
+func (s *FTPSession) handlePORT(arg string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if s.dataListener != nil {
+		s.dataListener.Close()
+		s.dataListener = nil
+	}
+
+	parts := strings.Split(arg, ",")
+	if len(parts) != 6 {
+		s.send("501 Syntax error in parameters.")
+		return
+	}
+
+	p1, err1 := strconv.Atoi(parts[4])
+	p2, err2 := strconv.Atoi(parts[5])
+	if err1 != nil || err2 != nil {
+		s.send("501 Invalid port parameters.")
+		return
+	}
+
+	port := p1*256 + p2
+	ipStr := fmt.Sprintf("%s.%s.%s.%s", parts[0], parts[1], parts[2], parts[3])
+	s.activeAddr = net.JoinHostPort(ipStr, strconv.Itoa(port))
+	s.send("200 PORT command successful.")
+}
+
+// 主动模式 EPRT 指令支持 (EPRT |<proto>|<ip>|<port>|)
+func (s *FTPSession) handleEPRT(arg string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if s.dataListener != nil {
+		s.dataListener.Close()
+		s.dataListener = nil
+	}
+
+	parts := strings.Split(arg, "|")
+	if len(parts) < 5 {
+		s.send("501 Syntax error in parameters.")
+		return
+	}
+
+	ipStr := parts[2]
+	portStr := parts[3]
+	s.activeAddr = net.JoinHostPort(ipStr, portStr)
+	s.send("200 EPRT command successful.")
+}
+
 func (s *FTPSession) getDataConn() (net.Conn, error) {
 	s.mu.Lock()
 	l := s.dataListener
 	s.dataListener = nil
+	activeTarget := s.activeAddr
+	s.activeAddr = ""
 	s.mu.Unlock()
 
-	if l == nil {
-		return nil, fmt.Errorf("no passive listener")
+	// 1. 被动连接模式 (PASV / EPSV)
+	if l != nil {
+		defer l.Close()
+		_ = l.(*net.TCPListener).SetDeadline(time.Now().Add(15 * time.Second))
+		conn, err := l.Accept()
+		if err != nil {
+			return nil, err
+		}
+		return conn, nil
 	}
-	defer l.Close()
 
-	_ = l.(*net.TCPListener).SetDeadline(time.Now().Add(10 * time.Second))
-	conn, err := l.Accept()
-	if err != nil {
-		return nil, err
+	// 2. 主动连接模式 (PORT / EPRT - 服务器主动连接客户端)
+	if activeTarget != "" {
+		dialer := net.Dialer{Timeout: 10 * time.Second}
+		conn, err := dialer.Dial("tcp", activeTarget)
+		if err != nil {
+			return nil, fmt.Errorf("active data connection failed: %v", err)
+		}
+		return conn, nil
 	}
-	return conn, nil
+
+	return nil, fmt.Errorf("no passive listener or active address configured")
 }
 
 func (s *FTPSession) handleLIST(arg string) {

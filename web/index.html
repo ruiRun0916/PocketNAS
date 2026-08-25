@@ -6,8 +6,8 @@
   <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <title>PocketNAS Pro v3.2.0 · 私人 NAS 控制台</title>
-  <link rel="stylesheet" href="style.css?v=20260825_320">
+  <title>PocketNAS Pro v3.2.2-beta1 · 私人 NAS 控制台</title>
+  <link rel="stylesheet" href="style.css?v=20260825_322">
 </head>
 <body>
 
@@ -29,7 +29,7 @@
         </div>
       </div>
 
-      <!-- 顶置 5 大功能 Tabs -->
+      <!-- 顶置 6 大功能横排 Tabs (顺序：全景看板 -> 存储矩阵 -> 设备连接 -> 文件系统 AList -> 文件闪传 -> 传输速度测试) -->
       <nav class="top-nav">
         <button class="nav-tab-btn active" data-tab="tab-overview">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
@@ -43,13 +43,17 @@
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
           <span>设备连接</span>
         </button>
-        <button class="nav-tab-btn" data-tab="tab-speedtest">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--accent-pink)" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
-          <span>传输速度测试</span>
-        </button>
         <button class="nav-tab-btn" data-tab="tab-alist">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
           <span>文件系统(AList)</span>
+        </button>
+        <button class="nav-tab-btn" data-tab="tab-fsend">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--accent-orange)" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+          <span>文件闪传</span>
+        </button>
+        <button class="nav-tab-btn" data-tab="tab-speedtest">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--accent-pink)" stroke-width="2.5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+          <span>传输速度测试</span>
         </button>
       </nav>
 
@@ -81,7 +85,7 @@
       <!-- ================= TAB 1: 首页全景控制台 ================= -->
       <div id="tab-overview" class="tab-pane active">
         
-        <!-- 第一行：4 列核心状态矩阵 (高空间利用率，消除无意义空白) -->
+        <!-- 第一行：4 列核心状态矩阵 -->
         <section class="grid-4-dense layout-row-1">
           
           <!-- 1. 存储空间卡片 -->
@@ -132,7 +136,7 @@
             </div>
           </div>
 
-          <!-- 3. CPU / SoC 处理器卡片 (极简实用：动态核心组平均负载、系统负载与SoC温度) -->
+          <!-- 3. CPU / SoC 处理器卡片 -->
           <div class="glass-panel card-cpu">
             <div class="panel-head">
               <div class="panel-title">
@@ -167,7 +171,7 @@
             </div>
           </div>
 
-          <!-- 4. 电池与真实健康卡片 (Wh为主要单位，mAh为辅，健康度/健康容量/循环次数/平滑续航) -->
+          <!-- 4. 电池与真实健康卡片 -->
           <div class="glass-panel card-battery">
             <div class="panel-head">
               <div class="panel-title">
@@ -479,12 +483,108 @@
               </div>
             </div>
 
+            <!-- 7. SMB 局域网共享 (由“多系统工具箱”APP 提供) -->
+            <div class="device-connect-card" style="border: 1px solid rgba(245, 158, 11, 0.35);">
+              <div class="device-card-head">
+                <span class="title" style="color:var(--accent-orange);">📁 SMB 局域网共享 (由「多系统工具箱」APP 提供)</span>
+                <span class="status-tag wait">需开启 APP 开关</span>
+              </div>
+              <p style="font-size:11px; color:var(--text-sub);">
+                💡 <strong>使用说明：</strong> 需在手机安装的「多系统工具箱」App 中开启【设置 ➔ 便利功能 ➔ SMB 共享】服务保持常驻：
+              </p>
+              <div style="display:flex; flex-direction:column; gap:4.5px;">
+                <div class="device-url-box">
+                  <div>
+                    <span style="font-size:9.5px; color:var(--text-muted);">Windows 访问链接 (Win+R 或资源管理器地址栏):</span>
+                    <div class="code" id="smb-win-url-val">\\10.x.x.x\</div>
+                  </div>
+                  <button class="btn-device-copy" style="background:linear-gradient(135deg, #d97706, #f59e0b);" onclick="copyText(document.getElementById('smb-win-url-val').innerText, 'Windows SMB 链接')">📋 复制 Win 链接</button>
+                </div>
+                <div class="device-url-box">
+                  <div>
+                    <span style="font-size:9.5px; color:var(--text-muted);">Mac / 电视 / 手机 访问链接 (Cmd+K 或 Infuse/Kodi):</span>
+                    <div class="code" id="smb-mac-url-val">smb://10.x.x.x</div>
+                  </div>
+                  <button class="btn-device-copy" style="background:linear-gradient(135deg, #d97706, #f59e0b);" onclick="copyText(document.getElementById('smb-mac-url-val').innerText, 'Mac SMB 链接')">📋 复制 Mac 链接</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- 8. 文件闪传 (网页极速免登文件快传) -->
+            <div class="device-connect-card" style="border: 1px solid rgba(0, 242, 254, 0.35);">
+              <div class="device-card-head">
+                <span class="title" style="color:var(--accent-cyan);">⚡ 文件闪传 (网页快传 / 免登直传)</span>
+                <span class="status-tag ok">端口 :2333</span>
+              </div>
+              <p style="font-size:11px; color:var(--text-sub);">
+                💡 <strong>使用说明：</strong> 手机端打开「文件闪传」App 并在后台运行，局域网设备可通过 IP 或官方域名访问：
+              </p>
+              <div style="display:flex; flex-direction:column; gap:4.5px;">
+                <div class="device-url-box">
+                  <div>
+                    <span style="font-size:9.5px; color:var(--text-muted);">局域网 IP 直连访问地址:</span>
+                    <div class="code" id="fsend-ip-url-val">http://10.x.x.x:2333</div>
+                  </div>
+                  <div style="display:flex; gap:4px;">
+                    <button class="btn-device-copy" onclick="copyText(document.getElementById('fsend-ip-url-val').innerText, '文件闪传 IP 地址')">📋 复制地址</button>
+                    <button class="btn-device-copy" onclick="openFSendTab()" style="background:linear-gradient(135deg, #0071e3, #00f2fe);">↗ 点击跳转</button>
+                  </div>
+                </div>
+                <div class="device-url-box">
+                  <div>
+                    <span style="font-size:9.5px; color:var(--text-muted);">官方配对直达域名:</span>
+                    <div class="code" id="fsend-domain-url-val">http://fsend.cn</div>
+                  </div>
+                  <div style="display:flex; gap:4px;">
+                    <button class="btn-device-copy" onclick="copyText('http://fsend.cn', '文件闪传官方域名')">📋 复制域名</button>
+                    <a class="btn-device-copy" href="http://fsend.cn" target="_blank" style="text-decoration:none; background:rgba(0,242,254,0.15); color:var(--accent-cyan); border:1px solid rgba(0,242,254,0.3);">↗ 打开</a>
+                  </div>
+                </div>
+              </div>
+            </div>
+
           </div>
         </div>
 
       </div>
 
-      <!-- ================= TAB 4: ⚡ 传输速度测试 ================= -->
+      <!-- ================= TAB 4: AList 内嵌文件管理 ================= -->
+      <div id="tab-alist" class="tab-pane">
+        <div class="glass-panel alist-panel">
+          <div class="alist-topbar">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span style="font-size:13px; font-weight:700; color:var(--text-main);">📁 AList 私人云存储</span>
+              <span class="status-tag ok" id="alist-badge-status">● 运行中</span>
+            </div>
+            <div style="display:flex; gap:6px;">
+              <button class="btn-mini-copy" onclick="reloadAListFrame()">🔄 刷新</button>
+              <a class="btn-mini-copy" id="btn-open-alist" href="http://127.0.0.1:5244" target="_blank" style="text-decoration:none;">↗ 外部打开</a>
+            </div>
+          </div>
+          <iframe id="alist-frame" class="alist-frame" src="about:blank"></iframe>
+        </div>
+      </div>
+
+      <!-- ================= TAB 5: 文件闪传内嵌页面 (新增) ================= -->
+      <div id="tab-fsend" class="tab-pane">
+        <div class="glass-panel alist-panel">
+          <div class="alist-topbar">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span style="font-size:13px; font-weight:700; color:var(--accent-orange);">⚡ 文件闪传 (Fast Send)</span>
+              <span class="status-tag ok">● 端口 :2333</span>
+              <span style="font-size:10.5px; color:var(--text-muted); display:inline-block; margin-left:6px;">💡 需先在手机打开「文件闪传」App 保持后台运行</span>
+            </div>
+            <div style="display:flex; gap:6px;">
+              <button class="btn-mini-copy" onclick="reloadFSendFrame()">🔄 刷新</button>
+              <a class="btn-mini-copy" id="btn-open-fsend" href="http://127.0.0.1:2333" target="_blank" style="text-decoration:none;">↗ 外部打开</a>
+              <a class="btn-mini-copy" href="http://fsend.cn" target="_blank" style="text-decoration:none; background:rgba(0,242,254,0.12); color:var(--accent-cyan);">🌐 官方域名</a>
+            </div>
+          </div>
+          <iframe id="fsend-frame" class="alist-frame" src="about:blank"></iframe>
+        </div>
+      </div>
+
+      <!-- ================= TAB 6: ⚡ 传输速度测试 ================= -->
       <div id="tab-speedtest" class="tab-pane">
         
         <div class="speed-modal-card">
@@ -549,23 +649,6 @@
 
       </div>
 
-      <!-- ================= TAB 5: AList 内嵌文件管理 ================= -->
-      <div id="tab-alist" class="tab-pane">
-        <div class="glass-panel alist-panel">
-          <div class="alist-topbar">
-            <div style="display:flex; align-items:center; gap:8px;">
-              <span style="font-size:13px; font-weight:700; color:var(--text-main);">📁 AList 私人云存储</span>
-              <span class="status-tag ok" id="alist-badge-status">● 运行中</span>
-            </div>
-            <div style="display:flex; gap:6px;">
-              <button class="btn-mini-copy" onclick="reloadAListFrame()">🔄 刷新</button>
-              <a class="btn-mini-copy" id="btn-open-alist" href="http://127.0.0.1:5244" target="_blank" style="text-decoration:none;">↗ 外部打开</a>
-            </div>
-          </div>
-          <iframe id="alist-frame" class="alist-frame" src="about:blank"></iframe>
-        </div>
-      </div>
-
     </main>
 
   </div>
@@ -575,6 +658,6 @@
     <span id="toast-text">已复制到剪贴板</span>
   </div>
 
-  <script src="app.js?v=20260825_320"></script>
+  <script src="app.js?v=20260825_322"></script>
 </body>
 </html>

@@ -1,10 +1,11 @@
 // =========================================================
-// PocketNAS Pro v3.2.0 - Universal Responsive Server Dashboard
-// Battery Health & Wh Primary · Minimalist CPU · Adaptive Polling
+// PocketNAS Pro v3.2.2-beta1 - Universal Responsive Server Dashboard
+// Battery Health & Wh Primary · Minimalist CPU · Ecosystem B Linkage
 // =========================================================
 
 let currentIP = window.location.hostname || "127.0.0.1";
 let alistUrl = "http://" + currentIP + ":5244";
+let fsendUrl = "http://" + currentIP + ":2333";
 
 const cpuHistory = [15, 18, 16, 22, 19, 28, 22, 18, 30, 24, 18, 22, 19, 16, 23, 19, 21, 24, 18, 17];
 const netDownHistory = [2, 5, 8, 12, 10, 16, 22, 18, 24, 30, 22, 14, 16, 22, 28, 20, 12, 18, 22, 26];
@@ -23,16 +24,8 @@ document.addEventListener("DOMContentLoaded", () => {
   initTabs();
   init3DTilt();
   initCanvasBuffers();
-  updateAlistLinks();
   startChainedPolling();
 });
-
-function updateAlistLinks() {
-  const btnOpenAlistNet = document.getElementById("btn-open-alist-net");
-  if (btnOpenAlistNet) btnOpenAlistNet.href = alistUrl;
-  const btnOpenAlist = document.getElementById("btn-open-alist");
-  if (btnOpenAlist) btnOpenAlist.href = alistUrl;
-}
 
 // ================= 1. 链式防堆叠轮询 (前台 2s / 后台 5s) =================
 function startChainedPolling() {
@@ -166,6 +159,11 @@ function switchTab(tabId) {
     if (frame && (!frame.src || frame.src === "about:blank")) {
       frame.src = alistUrl;
     }
+  } else if (tabId === "tab-fsend") {
+    const frame = document.getElementById("fsend-frame");
+    if (frame && (!frame.src || frame.src === "about:blank")) {
+      frame.src = fsendUrl;
+    }
   }
 }
 
@@ -173,6 +171,16 @@ function reloadAListFrame() {
   const frame = document.getElementById("alist-frame");
   if (frame) frame.src = alistUrl;
   showToast("已刷新 AList 视图");
+}
+
+function reloadFSendFrame() {
+  const frame = document.getElementById("fsend-frame");
+  if (frame) frame.src = fsendUrl;
+  showToast("已刷新文件闪传视图");
+}
+
+function openFSendTab() {
+  switchTab("tab-fsend");
 }
 
 // ================= 5. 复制功能与 Toast =================
@@ -593,11 +601,12 @@ async function fetchStatus(isManual = false) {
 
     if (data.network && data.network.ip && data.network.ip !== "127.0.0.1") {
       currentIP = data.network.ip;
-    } else if (window.location.hostname && window.location.hostname !== "127.0.0.1" && window.location.hostname !== "localhost") {
-      currentIP = window.location.hostname;
     }
     alistUrl = `http://${currentIP}:5244`;
-    updateAlistLinks();
+    fsendUrl = `http://${currentIP}:2333`;
+
+    const btnOpenFSend = document.getElementById("btn-open-fsend");
+    if (btnOpenFSend) btnOpenFSend.href = fsendUrl;
 
     // 1. 顶部 Header 动态设备型号识别
     if (data.device) {
@@ -832,7 +841,7 @@ async function fetchStatus(isManual = false) {
       }
     }
 
-    // 6. 网络速率与设备连接地址
+    // 6. 网络速率与设备连接地址 (动态更新全量链接)
     if (data.network) {
       const downEl = document.getElementById("net-down");
       const upEl = document.getElementById("net-up");
@@ -876,6 +885,12 @@ async function fetchStatus(isManual = false) {
         setCopyVal("alist-url-copy-val", `http://${data.network.ip}:5244`);
         setCopyVal("webui-url-copy-val", `http://${data.network.ip}:8080`);
         setCopyVal("ssh-url-copy-val", `ssh root@${data.network.ip} -p 22`);
+        
+        // 动态更新 SMB 链接 (多系统工具箱) 与文件闪传链接
+        setCopyVal("smb-win-url-val", `\\\\${data.network.ip}\\`);
+        setCopyVal("smb-mac-url-val", `smb://${data.network.ip}`);
+        setCopyVal("fsend-ip-url-val", `http://${data.network.ip}:2333`);
+        setCopyVal("fsend-domain-url-val", `http://fsend.cn`);
       }
 
       if (data.network.interface) {

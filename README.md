@@ -10,7 +10,11 @@
 </p>
 
 PocketNAS Pro 是一个专为 Android 设备（KernelSU / Magisk / APatch 环境）打造的**通用型 Android 私人 NAS 与全景硬件监控平台**。
+**需要配合[AListLite](https://github.com/LeoHaoVIP/AListLiteAndroid)一起使用**
+[AListLite](https://github.com/LeoHaoVIP/AListLiteAndroid) | 在 Android 上一键启动 OpenList 服务
+[AListLite](https://github.com/LeoHaoVIP/AListLiteAndroid) 支持服务一键启动、状态栏磁贴、后台常驻、开机自启和高级配置等功能，界面简洁，上手简单。用户无需借助安装 Termux 即可实现在 Android 设备（手机/电视）上使用 AList 服务。
 
+AListLite 支持服务一键启动、状态栏磁贴、后台常驻、开机自启和高级配置等功能，界面简洁，上手简单。
 它旨在将任意闲置的 Android 手机/平板，转变为极低功耗（熄屏待机仅约 **0.3W**）、免运维、开箱即用的 24/7 局域网私有云盘与硬件监控服务器。
 
 ---

@@ -1,0 +1,65 @@
+{
+  "device": "Android Device",
+  "system": "Android 14",
+  "kernel": "4.19.0-gvisor",
+  "selinux": "Enforcing",
+  "uptime": "10小时 2分",
+  "loadavg": "0.00 / 0.00 / 0.00",
+  "loadavg_1": "0.00",
+  "loadavg_5": "0.00",
+  "loadavg_15": "0.00",
+  "tasks": "0/0",
+  "storage": {
+    "target": "/",
+    "total": "8589934591.9 GB",
+    "used": "0.0 GB",
+    "free": "8589934591.9 GB",
+    "percent": 1
+  },
+  "memory": {
+    "total": "7.7 GB",
+    "used": "0.2 GB",
+    "free": "7.5 GB",
+    "percent": 3,
+    "zram": "未开启",
+    "zram_percent": 0,
+    "cached": "0.1 GB"
+  },
+  "cpu": {
+    "model": "Qualcomm Octa-Core",
+    "cores": 8,
+    "governor": "schedutil",
+    "usage": 0
+  },
+  "temperature": {
+    "cpu": 42,
+    "battery": 32
+  },
+  "network": {
+    "interface": "wlan0",
+    "ip": "127.0.0.1",
+    "mac": "00:00:00:00:00:00",
+    "gateway": "192.168.1.1",
+    "download": "0 B/s",
+    "upload": "0 B/s",
+    "total_download": "0 KB",
+    "total_upload": "0 KB"
+  },
+  "battery": {
+    "level": 100,
+    "charging": false,
+    "temperature": 32,
+    "power": "1.55 W",
+    "voltage": "4.10 V",
+    "current": "380 mA"
+  },
+  "services": {
+    "alist": false,
+    "alist_url": "http://127.0.0.1:5244",
+    "webdav": false,
+    "ssh": true,
+    "dashboard": true,
+    "monitor": true
+  },
+  "time": "2026-08-22 12:49:09"
+}

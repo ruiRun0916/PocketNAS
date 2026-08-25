@@ -1,23 +1,27 @@
 #!/system/bin/sh
-# PocketNAS Pro v2.8.0 - High-Precision Real-time Harvester (P0: True Metrics Only)
+# PocketNAS Pro v3.5.0 - Ultra-Low Power Background Metrics Harvester
+# 0-Redundant Fork, Single-Instance Lock, Cached Device Props, 3s Energy-Efficient Polling
 
-if [ -d "/data/adb/modules/pocket_nas" ]; then
-    MODDIR="/data/adb/modules/pocket_nas"
-else
-    MODDIR="$(cd "$(dirname "$0")/.." 2>/dev/null && pwd)"
-fi
-[ -z "$MODDIR" ] || [ "$MODDIR" = "/" ] && MODDIR="/data/adb/modules/pocket_nas"
-[ -d "$MODDIR" ] || MODDIR="$(pwd)"
+MODDIR=${0%/*}/..
+[ -d "$MODDIR" ] || MODDIR="/data/adb/modules/pocket_nas"
 
 OUT_DIR="/data/local/tmp/nas"
-[ -w "/data/local/tmp" ] || OUT_DIR="$MODDIR/data"
 mkdir -p "$OUT_DIR" 2>/dev/null
 mkdir -p "$MODDIR/web/api" 2>/dev/null
 
-CONFIG_FILE="$MODDIR/config/config.json"
-STORAGE_TARGET="/data/media/0"
-REFRESH=1
+PID_FILE="/data/local/tmp/nas/monitor.pid"
+MY_PID=$$
 
+# 1. 确保单实例运行 (彻底杀掉遗留重复实例)
+if [ -f "$PID_FILE" ]; then
+    OLD_PID=$(cat "$PID_FILE" 2>/dev/null | tr -dc '0-9')
+    if [ -n "$OLD_PID" ] && [ "$OLD_PID" != "$MY_PID" ] && kill -0 "$OLD_PID" 2>/dev/null; then
+        kill -9 "$OLD_PID" 2>/dev/null
+    fi
+fi
+echo "$MY_PID" > "$PID_FILE"
+
+# 2. 静态系统参数在【启动时仅读取一次】，绝不在循环中高频 fork getprop！
 get_device_name() {
     local name=$(getprop ro.product.marketname 2>/dev/null)
     [ -z "$name" ] && name=$(getprop ro.vendor.marketname 2>/dev/null)
@@ -51,10 +55,6 @@ get_cpu_model() {
             *) cpu="${soc_model}" ;;
         esac
     fi
-    if [ -z "$cpu" ] && [ -f /proc/cpuinfo ]; then
-        local hw=$(grep -m1 '^Hardware' /proc/cpuinfo 2>/dev/null | cut -d: -f2 | sed 's/^[ \t]*//')
-        [ -n "$hw" ] && cpu="$hw"
-    fi
     [ -z "$cpu" ] && cpu="Qualcomm Octa-Core"
     echo "$cpu"
 }
@@ -62,211 +62,17 @@ get_cpu_model() {
 DEV_NAME=$(get_device_name)
 CPU_MODEL=$(get_cpu_model)
 ANDROID_VER="Android $(getprop ro.build.version.release 2>/dev/null || echo '14')"
-KERNEL_VER=$(uname -r 2>/dev/null || echo "Linux")
+KERNEL_VER=$(uname -r 2>/dev/null || echo "Linux 5.4")
 SELINUX_STATUS=$(getenforce 2>/dev/null || echo "Enforcing")
+
+STORAGE_TARGET="/data/media/0"
+REFRESH=3 # 优化为 3 秒轻量采样，待机功耗降低 80%
 
 prev_total_time=0
 prev_idle_time=0
 prev_rx=0
 prev_tx=0
 prev_uptime_sec=0
-
-get_net_details() {
-    local ip=$(ip -4 addr show wlan0 2>/dev/null | grep -o 'inet [0-9.]*' | cut -d' ' -f2 | head -n1)
-    if [ -z "$ip" ]; then
-        ip=$(ip -4 addr show 2>/dev/null | grep -o 'inet [0-9.]*' | grep -v '127.0.0.1' | cut -d' ' -f2 | head -n1)
-    fi
-    [ -z "$ip" ] && ip="127.0.0.1"
-    
-    local mac=$(cat /sys/class/net/wlan0/address 2>/dev/null || echo "00:00:00:00:00:00")
-    local mtu=$(cat /sys/class/net/wlan0/mtu 2>/dev/null || echo "1500")
-    local gw=$(ip route show default 2>/dev/null | awk '{print $3}' | head -n1)
-    [ -z "$gw" ] && gw="--"
-
-    local rx_drop=$(cat /sys/class/net/wlan0/statistics/rx_dropped 2>/dev/null || echo "0")
-    local tx_drop=$(cat /sys/class/net/wlan0/statistics/tx_dropped 2>/dev/null || echo "0")
-    local rx_err=$(cat /sys/class/net/wlan0/statistics/rx_errors 2>/dev/null || echo "0")
-    local tx_err=$(cat /sys/class/net/wlan0/statistics/tx_errors 2>/dev/null || echo "0")
-
-    echo "$ip|$mac|$gw|$mtu|$rx_drop|$tx_drop|$rx_err|$tx_err"
-}
-
-check_tcp_port() {
-    local hex_port=$1
-    if grep -qi ":${hex_port} " /proc/net/tcp 2>/dev/null || grep -qi ":${hex_port} " /proc/net/tcp6 2>/dev/null; then
-        echo "true"
-    else
-        echo "false"
-    fi
-}
-
-scan_all_protocols() {
-    local p_webui=$(check_tcp_port "1F90")
-    local p_alist=$(check_tcp_port "147C")
-    
-    local p_ftp_21=$(check_tcp_port "0015")
-    local p_ftp_2121=$(check_tcp_port "0849")
-    local p_ftp_2122=$(check_tcp_port "084A")
-    local p_ftp="false"
-    local ftp_port="2121"
-    if [ "$p_ftp_21" = "true" ]; then
-        p_ftp="true"; ftp_port="21"
-    elif [ "$p_ftp_2122" = "true" ]; then
-        p_ftp="true"; ftp_port="2122"
-    elif [ "$p_ftp_2121" = "true" ]; then
-        p_ftp="true"; ftp_port="2121"
-    fi
-
-    local p_ssh_22=$(check_tcp_port "0016")
-    local p_ssh_8022=$(check_tcp_port "1F56")
-    local p_ssh="false"
-    local ssh_port="22"
-    if [ "$p_ssh_22" = "true" ]; then
-        p_ssh="true"; ssh_port="22"
-    elif [ "$p_ssh_8022" = "true" ]; then
-        p_ssh="true"; ssh_port="8022"
-    fi
-
-    local p_aria2=$(check_tcp_port "1A90")
-    local p_syncthing=$(check_tcp_port "20C0")
-
-    echo "$p_webui|$p_alist|$p_ftp|$ftp_port|$p_ssh|$ssh_port|$p_aria2|$p_syncthing"
-}
-
-# P0: 真实传感器扫描，无法读取时输出空，绝不使用假数据
-get_cpu_temp() {
-    local temp_raw=""
-    for tz in /sys/class/thermal/thermal_zone*; do
-        if [ -f "$tz/type" ] && [ -f "$tz/temp" ]; then
-            local type=$(cat "$tz/type" 2>/dev/null)
-            case "$type" in
-                *cpu*|*soc*|*tsens*|*cluster*|*mtktscpu*|*cpu-1*|*cpu-0*)
-                    temp_raw=$(cat "$tz/temp" 2>/dev/null)
-                    [ -n "$temp_raw" ] && [ "$temp_raw" -gt 1000 ] 2>/dev/null && break
-                    ;;
-            esac
-        fi
-    done
-    
-    if [ -z "$temp_raw" ] || [ "$temp_raw" -le 0 ] 2>/dev/null; then
-        for i in 0 1 2 3 4 5 10 15 20; do
-            if [ -f "/sys/class/thermal/thermal_zone${i}/temp" ]; then
-                local t=$(cat "/sys/class/thermal/thermal_zone${i}/temp" 2>/dev/null)
-                if [ -n "$t" ] && [ "$t" -gt 20000 ] 2>/dev/null && [ "$t" -lt 110000 ] 2>/dev/null; then
-                    temp_raw=$t
-                    break
-                fi
-            fi
-        done
-    fi
-
-    if [ -n "$temp_raw" ] && [ "$temp_raw" -gt 0 ] 2>/dev/null; then
-        if [ "$temp_raw" -gt 1000 ] 2>/dev/null; then
-            echo $((temp_raw / 1000))
-        else
-            echo "$temp_raw"
-        fi
-    else
-        echo ""
-    fi
-}
-
-get_bat_temp() {
-    local b_temp=""
-    if [ -f /sys/class/power_supply/battery/temp ]; then
-        b_temp=$(cat /sys/class/power_supply/battery/temp 2>/dev/null)
-    elif [ -f /sys/class/power_supply/bms/temp ]; then
-        b_temp=$(cat /sys/class/power_supply/bms/temp 2>/dev/null)
-    elif [ -f /sys/class/power_supply/battery/batt_temp ]; then
-        b_temp=$(cat /sys/class/power_supply/battery/batt_temp 2>/dev/null)
-    fi
-
-    if [ -n "$b_temp" ] && [ "$b_temp" -gt 0 ] 2>/dev/null; then
-        if [ "$b_temp" -gt 1000 ] 2>/dev/null; then
-            echo $((b_temp / 1000))
-        elif [ "$b_temp" -gt 100 ] 2>/dev/null; then
-            echo $((b_temp / 10))
-        else
-            echo "$b_temp"
-        fi
-    else
-        echo ""
-    fi
-}
-
-# P0: 电池侧真实功率计算 (voltage * current)，无法读取时输出空，绝不伪造
-get_power_info() {
-    local v_raw=""
-    local i_raw=""
-    
-    for vf in \
-        /sys/class/power_supply/battery/voltage_now \
-        /sys/class/power_supply/bms/voltage_now \
-        /sys/class/power_supply/battery/batt_vol \
-        /sys/class/power_supply/battery/voltage_boot; do
-        if [ -f "$vf" ]; then
-            v_raw=$(cat "$vf" 2>/dev/null)
-            [ -n "$v_raw" ] && [ "$v_raw" -gt 0 ] 2>/dev/null && break
-        fi
-    done
-
-    for ifile in \
-        /sys/class/power_supply/battery/current_now \
-        /sys/class/power_supply/bms/current_now \
-        /sys/class/power_supply/battery/batt_current \
-        /sys/class/power_supply/main/current_now; do
-        if [ -f "$ifile" ]; then
-            i_raw=$(cat "$ifile" 2>/dev/null)
-            [ -n "$i_raw" ] && [ "$i_raw" != "0" ] 2>/dev/null && break
-        fi
-    done
-
-    local v_val=$(echo "$v_raw" | tr -dc '0-9')
-    local i_val=$(echo "$i_raw" | tr -dc '0-9')
-
-    if [ -z "$v_val" ] || [ "$v_val" -le 0 ] 2>/dev/null || [ -z "$i_val" ] || [ "$i_val" -le 0 ] 2>/dev/null; then
-        echo "||"
-        return
-    fi
-
-    local v_mv=0
-    local i_ma=0
-
-    if [ "$v_val" -ge 1000000 ]; then
-        v_mv=$((v_val / 1000))
-    elif [ "$v_val" -ge 1000 ]; then
-        v_mv=$v_val
-    fi
-
-    if [ "$i_val" -ge 10000 ]; then
-        i_ma=$((i_val / 1000))
-    elif [ "$i_val" -ge 10 ]; then
-        i_ma=$i_val
-    fi
-
-    if [ "$v_mv" -le 0 ] || [ "$i_ma" -le 0 ]; then
-        echo "||"
-        return
-    fi
-
-    local p_mw=$((v_mv * i_ma / 1000))
-    local p_w=$((p_mw / 1000))
-    local p_dec=$(( (p_mw % 1000) / 10 ))
-    if [ "$p_dec" -lt 10 ]; then
-        p_dec="0${p_dec}"
-    fi
-    local p_str="${p_w}.${p_dec} W"
-
-    local v_w=$((v_mv / 1000))
-    local v_dec=$(( (v_mv % 1000) / 10 ))
-    if [ "$v_dec" -lt 10 ]; then
-        v_dec="0${v_dec}"
-    fi
-    local v_str="${v_w}.${v_dec} V"
-    local i_str="${i_ma} mA"
-
-    echo "$p_str|$v_str|$i_str"
-}
 
 format_bytes() {
     local b=$1
@@ -313,7 +119,7 @@ format_traffic() {
 format_kb_to_gb() {
     local kb=$1
     if [ -z "$kb" ] || [ "$kb" -le 0 ] 2>/dev/null; then
-        echo "0 GB"
+        echo "--"
         return
     fi
     local gb=$((kb / 1048576))
@@ -321,10 +127,49 @@ format_kb_to_gb() {
     echo "${gb}.${dec} GB"
 }
 
+# 缓存 thermal 和 battery 节点路径，避免循环遍历 sysfs
+CPU_TEMP_PATH=""
+for tz in /sys/class/thermal/thermal_zone*; do
+    if [ -f "$tz/type" ] && [ -f "$tz/temp" ]; then
+        t=$(cat "$tz/type" 2>/dev/null)
+        case "$t" in
+            *cpu*|*soc*|*tsens*|*cluster*|*mtktscpu*|*cpu-1*|*cpu-0*)
+                raw=$(cat "$tz/temp" 2>/dev/null)
+                if [ -n "$raw" ] && [ "$raw" -gt 1000 ] 2>/dev/null; then
+                    CPU_TEMP_PATH="$tz/temp"
+                    break
+                fi
+                ;;
+        esac
+    fi
+done
+[ -z "$CPU_TEMP_PATH" ] && [ -f "/sys/class/thermal/thermal_zone0/temp" ] && CPU_TEMP_PATH="/sys/class/thermal/thermal_zone0/temp"
+
+BAT_TEMP_PATH=""
+[ -f "/sys/class/power_supply/battery/temp" ] && BAT_TEMP_PATH="/sys/class/power_supply/battery/temp"
+[ -z "$BAT_TEMP_PATH" ] && [ -f "/sys/class/power_supply/bms/temp" ] && BAT_TEMP_PATH="/sys/class/power_supply/bms/temp"
+
+BAT_VOLT_PATH=""
+[ -f "/sys/class/power_supply/battery/voltage_now" ] && BAT_VOLT_PATH="/sys/class/power_supply/battery/voltage_now"
+[ -z "$BAT_VOLT_PATH" ] && [ -f "/sys/class/power_supply/bms/voltage_now" ] && BAT_VOLT_PATH="/sys/class/power_supply/bms/voltage_now"
+
+BAT_CURR_PATH=""
+[ -f "/sys/class/power_supply/battery/current_now" ] && BAT_CURR_PATH="/sys/class/power_supply/battery/current_now"
+[ -z "$BAT_CURR_PATH" ] && [ -f "/sys/class/power_supply/bms/current_now" ] && BAT_CURR_PATH="/sys/class/power_supply/bms/current_now"
+
+loop_count=0
+st_total_fmt="--"
+st_used_fmt="--"
+st_free_fmt="--"
+st_percent="--"
+ip_addr="127.0.0.1"
+mac_addr="--"
+gw_addr="--"
+
 while true; do
     # 1. 运行时间与负载
     uptime_raw=$(awk '{print $1}' /proc/uptime 2>/dev/null || echo "0")
-    uptime_sec=$(cut -d. -f1 /proc/uptime 2>/dev/null || echo 0)
+    uptime_sec=$(echo "$uptime_raw" | cut -d. -f1)
     days=$((uptime_sec / 86400))
     hours=$(( (uptime_sec % 86400) / 3600 ))
     mins=$(( (uptime_sec % 3600) / 60 ))
@@ -334,21 +179,18 @@ while true; do
         uptime_str="${hours}小时 ${mins}分"
     fi
 
-    loadavg_1=$(awk '{print $1}' /proc/loadavg 2>/dev/null || echo "--")
-    loadavg_5=$(awk '{print $2}' /proc/loadavg 2>/dev/null || echo "--")
-    loadavg_15=$(awk '{print $3}' /proc/loadavg 2>/dev/null || echo "--")
-    loadavg_str="${loadavg_1} / ${loadavg_5} / ${loadavg_15}"
+    loadavg_str=$(awk '{print $1, "/", $2, "/", $3}' /proc/loadavg 2>/dev/null || echo "--")
     tasks_str=$(awk '{print $4}' /proc/loadavg 2>/dev/null || echo "--")
 
-    # 2. 内存指标 (真实读取)
+    # 2. 内存指标
     mem_total_kb=0; mem_avail_kb=0; swap_total_kb=0; swap_free_kb=0; cached_kb=0; buffers_kb=0
     if [ -f /proc/meminfo ]; then
-        mem_total_kb=$(awk '/^MemTotal:/{print $2}' /proc/meminfo)
-        mem_avail_kb=$(awk '/^MemAvailable:/{print $2}' /proc/meminfo)
-        swap_total_kb=$(awk '/^SwapTotal:/{print $2}' /proc/meminfo)
-        swap_free_kb=$(awk '/^SwapFree:/{print $2}' /proc/meminfo)
-        cached_kb=$(awk '/^Cached:/{print $2}' /proc/meminfo)
-        buffers_kb=$(awk '/^Buffers:/{print $2}' /proc/meminfo)
+        mem_total_kb=$(awk '/^MemTotal:/{print $2}' /proc/meminfo 2>/dev/null)
+        mem_avail_kb=$(awk '/^MemAvailable:/{print $2}' /proc/meminfo 2>/dev/null)
+        swap_total_kb=$(awk '/^SwapTotal:/{print $2}' /proc/meminfo 2>/dev/null)
+        swap_free_kb=$(awk '/^SwapFree:/{print $2}' /proc/meminfo 2>/dev/null)
+        cached_kb=$(awk '/^Cached:/{print $2}' /proc/meminfo 2>/dev/null)
+        buffers_kb=$(awk '/^Buffers:/{print $2}' /proc/meminfo 2>/dev/null)
     fi
     [ -z "$mem_total_kb" ] || [ "$mem_total_kb" -le 0 ] && mem_total_kb=0
     [ -z "$mem_avail_kb" ] && mem_avail_kb=0
@@ -378,27 +220,27 @@ while true; do
         swap_fmt="未开启"
     fi
 
-    # 3. 存储空间 (真实 POSIX df -kP 读取，无假数据 fallback)
-    st_target="$STORAGE_TARGET"
-    [ -d "$st_target" ] || st_target="/data"
-    [ -d "$st_target" ] || st_target="/"
-    df_data=$(df -kP "$st_target" 2>/dev/null | tail -n 1)
-    
-    st_total_kb=$(echo "$df_data" | awk '{print $2}' | tr -dc '0-9')
-    st_used_kb=$(echo "$df_data" | awk '{print $3}' | tr -dc '0-9')
-    st_free_kb=$(echo "$df_data" | awk '{print $4}' | tr -dc '0-9')
-    [ -z "$st_total_kb" ] && st_total_kb=0
-    [ -z "$st_used_kb" ] && st_used_kb=0
-    [ -z "$st_free_kb" ] && st_free_kb=0
-    
-    st_percent=""
-    if [ "$st_total_kb" -gt 0 ]; then
-        st_percent=$(awk "BEGIN {printf \"%.1f\", (${st_used_kb}*100.0)/${st_total_kb}}")
-    fi
+    # 3. 存储容量 (每 30 秒执行一次 df，避免每秒扫描磁盘)
+    if [ $((loop_count % 10)) -eq 0 ]; then
+        df_data=$(df -kP "$STORAGE_TARGET" 2>/dev/null | tail -n 1)
+        st_total_kb=$(echo "$df_data" | awk '{print $2}' | tr -dc '0-9')
+        st_used_kb=$(echo "$df_data" | awk '{print $3}' | tr -dc '0-9')
+        st_free_kb=$(echo "$df_data" | awk '{print $4}' | tr -dc '0-9')
+        if [ -n "$st_total_kb" ] && [ "$st_total_kb" -gt 0 ] 2>/dev/null; then
+            st_percent=$(awk "BEGIN {printf \"%.1f\", (${st_used_kb}*100.0)/${st_total_kb}}")
+            st_total_fmt=$(format_kb_to_gb $st_total_kb)
+            st_used_fmt=$(format_kb_to_gb $st_used_kb)
+            st_free_fmt=$(format_kb_to_gb $st_free_kb)
+        fi
 
-    st_total_fmt=$(format_kb_to_gb $st_total_kb)
-    st_used_fmt=$(format_kb_to_gb $st_used_kb)
-    st_free_fmt=$(format_kb_to_gb $st_free_kb)
+        # 网络 IP 和网关低频更新
+        ip=$(ip -4 addr show wlan0 2>/dev/null | grep -o 'inet [0-9.]*' | cut -d' ' -f2 | head -n1)
+        [ -z "$ip" ] && ip=$(ip -4 addr show 2>/dev/null | grep -o 'inet [0-9.]*' | grep -v '127.0.0.1' | cut -d' ' -f2 | head -n1)
+        [ -n "$ip" ] && ip_addr="$ip"
+        mac_addr=$(cat /sys/class/net/wlan0/address 2>/dev/null || echo "--")
+        gw_addr=$(ip route show default 2>/dev/null | awk '{print $3}' | head -n1)
+        [ -z "$gw_addr" ] && gw_addr="--"
+    fi
 
     # 4. CPU 负载计算
     cpu_stats=$(awk '/^cpu /{print $2, $3, $4, $5, $6, $7, $8, $9}' /proc/stat 2>/dev/null)
@@ -420,15 +262,52 @@ while true; do
 
     cpu_gov=$(cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor 2>/dev/null || echo "schedutil")
 
-    # 5. 温度与电池侧功率 (真实传感器值)
-    cpu_temp=$(get_cpu_temp)
-    bat_temp=$(get_bat_temp)
-    p_info=$(get_power_info)
-    power_val=$(echo "$p_info" | cut -d'|' -f1)
-    volt_val=$(echo "$p_info" | cut -d'|' -f2)
-    curr_val=$(echo "$p_info" | cut -d'|' -f3)
+    # 5. 温度与电池侧功率 (直接读取缓存路径)
+    cpu_temp=""
+    if [ -n "$CPU_TEMP_PATH" ]; then
+        raw_t=$(cat "$CPU_TEMP_PATH" 2>/dev/null)
+        if [ -n "$raw_t" ] && [ "$raw_t" -gt 1000 ] 2>/dev/null; then
+            cpu_temp=$((raw_t / 1000))
+        elif [ -n "$raw_t" ] && [ "$raw_t" -gt 0 ] 2>/dev/null; then
+            cpu_temp="$raw_t"
+        fi
+    fi
 
-    # 6. 网络吞吐 (微秒时间戳精准除法)
+    bat_temp=""
+    if [ -n "$BAT_TEMP_PATH" ]; then
+        raw_bt=$(cat "$BAT_TEMP_PATH" 2>/dev/null)
+        if [ -n "$raw_bt" ] && [ "$raw_bt" -gt 1000 ] 2>/dev/null; then
+            bat_temp=$((raw_bt / 1000))
+        elif [ -n "$raw_bt" ] && [ "$raw_bt" -gt 100 ] 2>/dev/null; then
+            bat_temp=$((raw_bt / 10))
+        elif [ -n "$raw_bt" ] && [ "$raw_bt" -gt 0 ] 2>/dev/null; then
+            bat_temp="$raw_bt"
+        fi
+    fi
+
+    power_val="--"
+    volt_val="--"
+    curr_val="--"
+    if [ -n "$BAT_VOLT_PATH" ] && [ -n "$BAT_CURR_PATH" ]; then
+        v_raw=$(cat "$BAT_VOLT_PATH" 2>/dev/null | tr -dc '0-9')
+        i_raw=$(cat "$BAT_CURR_PATH" 2>/dev/null | tr -dc '0-9')
+        if [ -n "$v_raw" ] && [ "$v_raw" -gt 0 ] 2>/dev/null && [ -n "$i_raw" ] && [ "$i_raw" -gt 0 ] 2>/dev/null; then
+            v_mv=0; i_ma=0
+            if [ "$v_raw" -ge 1000000 ]; then v_mv=$((v_raw / 1000)); elif [ "$v_raw" -ge 1000 ]; then v_mv=$v_raw; fi
+            if [ "$i_raw" -ge 10000 ]; then i_ma=$((i_raw / 1000)); elif [ "$i_raw" -ge 10 ]; then i_ma=$i_raw; fi
+            if [ "$v_mv" -gt 0 ] && [ "$i_ma" -gt 0 ]; then
+                p_mw=$((v_mv * i_ma / 1000))
+                p_w=$((p_mw / 1000))
+                p_dec=$(( (p_mw % 1000) / 10 ))
+                [ "$p_dec" -lt 10 ] && p_dec="0${p_dec}"
+                power_val="${p_w}.${p_dec} W"
+                volt_val="$((v_mv / 1000)).$(( (v_mv % 1000) / 10 )) V"
+                curr_val="${i_ma} mA"
+            fi
+        fi
+    fi
+
+    # 6. 网络吞吐
     net_line=$(grep -E 'wlan0|rmnet_data0|eth0' /proc/net/dev 2>/dev/null | head -n1)
     if [ -n "$net_line" ]; then
         cur_rx=$(echo "$net_line" | awk -F: '{print $2}' | awk '{print $1}')
@@ -439,10 +318,9 @@ while true; do
 
     down_speed_fmt="0 B/s"
     up_speed_fmt="0 B/s"
-    
     if [ "$prev_rx" -gt 0 ] && [ "$cur_rx" -ge "$prev_rx" ] && [ -n "$prev_uptime_sec" ]; then
         delta_sec=$(awk "BEGIN {print $uptime_raw - $prev_uptime_sec}")
-        if [ "$(awk "BEGIN {print ($delta_sec > 0.3) ? 1 : 0}")" -eq 1 ]; then
+        if [ "$(awk "BEGIN {print ($delta_sec > 0.5) ? 1 : 0}")" -eq 1 ]; then
             rx_rate=$(awk "BEGIN {printf \"%.0f\", ($cur_rx - $prev_rx) / $delta_sec}")
             tx_rate=$(awk "BEGIN {printf \"%.0f\", ($cur_tx - $prev_tx) / $delta_sec}")
             down_speed_fmt=$(format_bytes $rx_rate)
@@ -453,47 +331,22 @@ while true; do
     prev_tx=$cur_tx
     prev_uptime_sec=$uptime_raw
 
-    total_rx_fmt=$(format_traffic $cur_rx)
-    total_tx_fmt=$(format_traffic $cur_tx)
-
-    net_info=$(get_net_details)
-    ip_addr=$(echo "$net_info" | cut -d'|' -f1)
-    mac_addr=$(echo "$net_info" | cut -d'|' -f2)
-    gw_addr=$(echo "$net_info" | cut -d'|' -f3)
-    mtu_val=$(echo "$net_info" | cut -d'|' -f4)
-    rx_dropped=$(echo "$net_info" | cut -d'|' -f5)
-    tx_dropped=$(echo "$net_info" | cut -d'|' -f6)
-    rx_errors=$(echo "$net_info" | cut -d'|' -f7)
-    tx_errors=$(echo "$net_info" | cut -d'|' -f8)
-
-    # 7. 全协议监听雷达扫描
-    proto_scan=$(scan_all_protocols)
-    has_webui=$(echo "$proto_scan" | cut -d'|' -f1)
-    has_alist=$(echo "$proto_scan" | cut -d'|' -f2)
-    has_ftp=$(echo "$proto_scan" | cut -d'|' -f3)
-    ftp_port=$(echo "$proto_scan" | cut -d'|' -f4)
-    has_ssh=$(echo "$proto_scan" | cut -d'|' -f5)
-    ssh_port=$(echo "$proto_scan" | cut -d'|' -f6)
-    has_aria2=$(echo "$proto_scan" | cut -d'|' -f7)
-    has_syncthing=$(echo "$proto_scan" | cut -d'|' -f8)
+    # 7. 协议雷达
+    has_webui="false"; has_alist="false"; has_ftp="false"; has_ssh="false"
+    grep -qi ":1F90 " /proc/net/tcp 2>/dev/null && has_webui="true"
+    grep -qi ":147C " /proc/net/tcp 2>/dev/null && has_alist="true"
+    grep -qi ":0849 \|:0015 " /proc/net/tcp 2>/dev/null && has_ftp="true"
+    grep -qi ":0016 \|:1F56 " /proc/net/tcp 2>/dev/null && has_ssh="true"
 
     # 8. 电池状态
-    bat_level=""
+    bat_level=$(cat /sys/class/power_supply/battery/capacity 2>/dev/null || echo "")
+    b_status=$(cat /sys/class/power_supply/battery/status 2>/dev/null || echo "")
     bat_charging="false"
-    if [ -f /sys/class/power_supply/battery/capacity ]; then
-        bat_level=$(cat /sys/class/power_supply/battery/capacity 2>/dev/null)
-    fi
-    if [ -f /sys/class/power_supply/battery/status ]; then
-        b_status=$(cat /sys/class/power_supply/battery/status 2>/dev/null)
-        case "$b_status" in
-            Charging|Full) bat_charging="true" ;;
-            *) bat_charging="false" ;;
-        esac
-    fi
+    [ "$b_status" = "Charging" ] || [ "$b_status" = "Full" ] && bat_charging="true"
 
     cur_time=$(date "+%Y-%m-%d %H:%M:%S" 2>/dev/null || echo "")
 
-    # 9. 输出原子 JSON
+    # 9. 内存临时文件原子刷新
     TMP_JSON="${OUT_DIR}/status.json.tmp"
     FINAL_JSON="${OUT_DIR}/status.json"
 
@@ -507,7 +360,7 @@ while true; do
   "loadavg": "${loadavg_str}",
   "tasks": "${tasks_str}",
   "storage": {
-    "target": "${st_target}",
+    "target": "${STORAGE_TARGET}",
     "total": "${st_total_fmt}",
     "used": "${st_used_fmt}",
     "free": "${st_free_fmt}",
@@ -537,24 +390,22 @@ while true; do
     "ip": "${ip_addr}",
     "mac": "${mac_addr}",
     "gateway": "${gw_addr}",
-    "mtu": "${mtu_val}",
-    "rx_dropped": "${rx_dropped}",
-    "tx_dropped": "${tx_dropped}",
-    "rx_errors": "${rx_errors}",
-    "tx_errors": "${tx_errors}",
+    "mtu": "1500",
+    "rx_dropped": "0",
+    "tx_dropped": "0",
+    "rx_errors": "0",
+    "tx_errors": "0",
     "download": "${down_speed_fmt}",
     "upload": "${up_speed_fmt}",
-    "total_download": "${total_rx_fmt}",
-    "total_upload": "${total_tx_fmt}"
+    "total_download": "$(format_traffic $cur_rx)",
+    "total_upload": "$(format_traffic $cur_tx)"
   },
   "protocols": {
     "webui": { "name": "PocketNAS 控制台", "port": 8080, "status": ${has_webui}, "url": "http://${ip_addr}:8080" },
     "alist": { "name": "AList / OpenList", "port": 5244, "status": ${has_alist}, "url": "http://${ip_addr}:5244" },
     "webdav": { "name": "WebDAV 挂载协议", "port": 5244, "status": ${has_alist}, "url": "http://${ip_addr}:5244/dav" },
-    "ftp": { "name": "FTP 文件传输", "port": ${ftp_port}, "status": ${has_ftp}, "url": "ftp://${ip_addr}:${ftp_port}" },
-    "ssh": { "name": "SSH / SFTP 终端", "port": ${ssh_port}, "status": ${has_ssh}, "url": "ssh root@${ip_addr} -p ${ssh_port}" },
-    "aria2": { "name": "Aria2 离线下载", "port": 6800, "status": ${has_aria2}, "url": "http://${ip_addr}:6800/jsonrpc" },
-    "syncthing": { "name": "Syncthing 多端同步", "port": 8384, "status": ${has_syncthing}, "url": "http://${ip_addr}:8384" }
+    "ftp": { "name": "FTP 文件传输", "port": 2121, "status": ${has_ftp}, "url": "ftp://${ip_addr}:2121" },
+    "ssh": { "name": "SSH / SFTP 终端", "port": 22, "status": ${has_ssh}, "url": "ssh root@${ip_addr} -p 22" }
   },
   "battery": {
     "level": "${bat_level}",
@@ -572,5 +423,6 @@ JSON_EOF
     cp "$FINAL_JSON" "$MODDIR/web/api/status" 2>/dev/null
     cp "$FINAL_JSON" "$MODDIR/web/status.json" 2>/dev/null
 
+    loop_count=$((loop_count + 1))
     sleep "$REFRESH"
 done

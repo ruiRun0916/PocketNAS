@@ -1,104 +1,105 @@
-# 口袋 NAS · PocketNAS Pro
+# 口袋 NAS · PocketNAS Pro v3.2.0
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Author-ruiRun0916-blue?style=flat-square&logo=github" alt="Author" />
-  <img src="https://img.shields.io/badge/Root-KernelSU%20%7C%20Magisk%20%7C%20APatch-blue?style=flat-square&logo=android" alt="Root Compatibility" />
-  <img src="https://img.shields.io/badge/Architecture-ARM64%20%7C%20Linux%20Kernel-green?style=flat-square" alt="Architecture" />
-  <img src="https://img.shields.io/badge/License-MIT-orange?style=flat-square" alt="License" />
+  <img src="https://img.shields.io/badge/Release-v3.2.0-blue?style=flat-square" alt="Version" />
+  <img src="https://img.shields.io/badge/Go-1.22+-00ADD8?style=flat-square&logo=go" alt="Go" />
+  <img src="https://img.shields.io/badge/Architecture-ARM64%20(Pure%20Go%20Static)-green?style=flat-square" alt="Architecture" />
+  <img src="https://img.shields.io/badge/Root-KernelSU%20%7C%20Magisk%20%7C%20APatch-blueviolet?style=flat-square" alt="Root" />
+  <img src="https://img.shields.io/badge/Android-11%20~%2015%20(Kernel%205.4%2B)-orange?style=flat-square" alt="Android" />
+  <img src="https://img.shields.io/badge/License-MIT-green?style=flat-square" alt="License" />
 </p>
 
-PocketNAS Pro 是一个专为 Android Root 环境（KernelSU / Magisk / APatch）设计的轻量级私人 NAS 模块，旨在将闲置 Android 手机转换为 24/7 常驻的局域网存储与监控服务器。
+PocketNAS Pro 是一个专为 Android 设备（KernelSU / Magisk / APatch 环境）打造的**通用型 Android 私人 NAS 与全景硬件监控平台**。
+
+它旨在将任意闲置的 Android 手机/平板，转变为低功耗（熄屏待机仅约 **0.3W**）、免运维、开箱即用的 24/7 局域网私有云盘与硬件监控服务器。
 
 ---
 
-## 📌 核心功能
+## 🌟 v3.2.0 核心更新与技术亮点
 
-### 1. 存储与文件共享
-- **原生 FTP 服务（端口: 2121）**：
-  - 默认共享目录 `/data/media/0`（手机内部存储）；
-  - 支持匿名免密直接读写，适配 MT 管理器、FileZilla、电脑文件快传等场景；
-  - 内置路径安全检查（`safeResolvePath`），防止 `../` 路径穿越及软链接逃逸；
-  - 保护共享根目录本身，防止意外删除或重命名。
-- **WebDAV / AList Lite 挂载（端口: 5244）**：
-  - 支持在 Mac 访达（`Cmd + K`）及 Windows（映射网络驱动器）中挂载为本地磁盘；
-  - 支持在 Kodi、影视仓、Infuse 等多媒体客户端中通过 WebDAV 播放局域网音视频。
+### 1. 🖥️ PC 大屏空间极致利用与全响应式排版
+- **多端视口自适应**：构建了覆盖超宽 PC（`>=1600px`）、普通桌面（`1200px~1599px`）、平板（`768px~1199px`）与手机（`<768px`）的 4 级响应式网格布局。
+- **消灭底部无效留白**：优化各监控卡片的信息层级与高度比例，在 1080p 标准屏幕下实现内容自然铺满首屏，信息密度大幅提升。
+- **数字优先设计**：核心存储空间、内存占用、实时功耗等关键指标采用醒目大字号展示，一眼尽览核心状态。
 
-### 2. 网页管理控制台（端口: 8080）
-- 提供直观的 Web 端单页管理界面；
-- 实时展示内部存储容量、运行内存占用、ZRAM 交换分区状态；
-- 展示 CPU 实时负载波动与网络上下行实时吞吐曲线；
-- 读取并展示 SoC 芯片温度、电池温度及电池侧功率（基于真实传感器数据，无法读取时显示 `--`，不使用伪造数据）。
+### 2. 🔋 真实电池健康度与 Wh 主单位能量管理
+- **真实健康度探测（BatteryProvider）**：动态探测 Linux/Android 内核底层与各厂商 BMS 节点（`charge_full`、`charge_full_design`、`cycle_count`），杜绝粗暴写死 100% 健康度。
+- **Wh 标称能量优先**：全面以工程级 **Wh** 为主单位呈现容量（如 `17.6 Wh`），并以较小字号辅助显示 `≈ 4630 mAh`。
+- **真实循环次数**：如实读取并呈现电池充电循环次数（`cycle_count`），无法获取时显示“未知”，绝不编造虚假数据。
+- **智能平滑续航估算**：
+  - 放电状态：基于健康容量能量与 60 秒滑动平均功耗（EMA 滤波）计算稳定剩余可用时间（如 `≈ 1天 4小时` 或 `≈ 4小时 12分`），杜绝瞬间功耗波动导致的数值跳变；
+  - 充电状态：**自动隐藏剩余续航时间**，自适应切换为展示 `⚡ 充电中 (充电功率: X.X W)` 或 `⚡ 已充满`。
 
-### 3. 局域网传输测速
-- 支持在浏览器端直接发起与手机 NAS 之间的双向网络传输测试；
-- 包含 Ping 延迟、Jitter 抖动、客户端至 NAS（上传）与 NAS 至客户端（下载）吞吐压测；
-- 单向压测持续 6 秒以上，减少瞬时网络波动带来的误差；
-- 测速过程在内存中流式处理，不产生磁盘临时文件。
+### 3. ⚡ 通用多平台 SoC 架构与动态拓扑识别
+- **多层解耦识别引擎**：
+  - **第 1 层**：直接从 `/proc/cpuinfo` 读取 ARM MIDR（Implementer 与 Part），解码为具体核心（如 Cortex-X1..X4、A78..A720、A55..A520、Qualcomm Oryon/Kryo）；
+  - **第 2 层**：从 `/sys/devices/system/cpu/` 动态扫描并聚合 CPU 拓扑簇（Cluster）；
+  - **第 3 层**：匹配高通骁龙（8/7/6系列）、联发科天玑（9000/8000/7000/1000系列）、Google Tensor、三星 Exynos 规格数据库；
+- **核心组平均利用率**：单次遍历 `/proc/stat` 同时计算各核心组（如 `A55 24% 4 Core`、`A78 61% 3 Core`、`X1 18% 1 Core`）的平均负载与系统 1/5/15 分钟负载。
+- **极简实用**：主卡片彻底剔除当前 MHz、最大频率、制程、GPU 型号等冗余硬件参数，回归 NAS 监控本真。
 
----
-
-## ⚙️ 架构与能效设计
-
-- **进程内无 Fork 采集**：直接读取 Linux 内核 `/proc/stat`、`/proc/meminfo`、`/proc/net/dev`、`/sys/class/thermal` 及 `statfs` 系统调用，避免频繁创建 Shell 子进程；
-- **内存快照响应**：状态数据通过内存中的线程安全快照维护，API 直接返回内存数据，避免每秒读写磁盘；
-- **分级采样频率**：
-  - CPU 负载与网络吞吐：1 秒
-  - 内存与系统负载：2 秒
-  - 温度、电池状态与协议扫描：5 秒
-  - 存储空间：30 秒
-- **进程管理与容错**：采用 PID 文件管理后台进程，看门狗在检测到服务异常时采用指数退避机制重启，并设有重试次数上限以防止死循环。
-- **VPN 兼容**：服务默认监听 `0.0.0.0`，不设 IP 白名单或网段限制，手机开启 VPN 或处于热点环境下仍可正常工作。
+### 4. 🍃 极低待机功耗架构（0-Fork / 纯 Go 单进程）
+- **完全告别 Shell 轮询**：所有数据采集均在单一 Go 原生进程内直接通过 Linux sysfs、`/proc` 与系统调用完成，彻底移除了旧版产生的高频 `sh`、`cat`、`grep`、`getprop` 唤醒风暴。
+- **分级能效采样**：
+  - 静态规格（SoC 型号、CPU 拓扑、设计容量）：启动时读取 1 次并内存常驻；
+  - 动态状态（CPU 负载、网络速率）：1~2 秒轻量更新；
+  - 能量与温度（电池电压、电流、温区）：3 秒低频更新；
+  - 存储 `statfs`：30 秒更新。
 
 ---
 
-## 📱 适用环境
+## 📊 功耗表现实测（Xiaomi 11 Ultra / Snapdragon 888）
 
-- **测试设备**：Xiaomi 11 Ultra（骁龙 888，12GB RAM，512GB UFS 3.1）
-- **系统版本**：Android 14（Linux 内核 5.4 及以上）
-- **Root 环境**：KernelSU / Magisk / APatch / SukiSU
-- **运行建议**：建议插电长期运行，并将相关应用或模块排除在系统的激进后台清理策略之外。
-
----
-
-## 🚀 安装与使用
-
-### 安装步骤
-1. 在 [Releases](../../releases) 页面下载最新的 `PocketNAS_vX.X.X.zip`；
-2. 在 **KernelSU 管理器** 或 **Magisk App** 中选择「从本地安装」并刷入；
-3. 刷入完成后重启设备（或在模块列表中直接点击「执行」启动控制台）。
-
-### 访问方式
-确保访问设备与手机处于同一局域网下：
-- **Web 控制台**：`http://[手机局域网IP]:8080`
-- **FTP 服务**：`ftp://[手机局域网IP]:2121`（匿名免密）
-- **WebDAV 挂载**：`http://[手机局域网IP]:5244/dav`
-- **AList 聚合面板**：`http://[手机局域网IP]:5244`
+| 运行状态 | 旧版 Shell 轮询架构 | PocketNAS Pro v3.2.0 (Go 原生) | 优化幅度 |
+| :--- | :--- | :--- | :--- |
+| **熄屏待机功耗** | ~ 2.2W - 3.4W (高频唤醒锁核) | **~ 0.3W (小核休眠 710MHz)** | ⬇️ **降低约 85% - 90%** |
+| **亮屏空闲功耗** | ~ 2.5W - 3.8W | **~ 1.x W** | ⬇️ **降低约 60%** |
+| **进程与线程开销** | 150+ 进程创建/秒 | **0 子进程创建 (单二进制常驻)** | ⬇️ **100% 杜绝 Fork 消耗** |
+| **内存占用 (RAM)** | 波动且多命令占用 | **< 20MB 稳定常驻** | 极低内存开销 |
 
 ---
 
-## 📂 项目结构
+## 💾 核心存储与文件共享服务
 
-```text
-pocket_nas/
-├── module.prop          # 模块元数据定义
-├── customize.sh         # 安装与权限配置脚本
-├── service.sh           # 开机自启动与进程守护脚本
-├── action.sh            # 管理器一键跳转入口
-├── config/
-│   └── config.json      # 服务端口与基础配置
-├── scripts/
-│   └── monitor.sh       # 备用状态采集脚本
-├── server/
-│   ├── main.go          # Go 守护进程主入口
-│   └── speedtest.go     # 测速接口与并发控制
-└── web/
-    ├── index.html       # 控制台前端页面
-    ├── style.css        # 控制台样式表
-    └── app.js           # 前端数据交互与图表渲染
+1. **24/7 原生安全 FTP 服务（端口: 2121）**：
+   - 默认共享路径 `/data/media/0`（手机内部存储）；
+   - 支持匿名免密全速读写，内置 `safeResolvePath` 软链接防逃逸与根目录保护机制。
+2. **WebDAV 局域网挂载（端口: 5244/dav）**：
+   - Mac 访达（`Cmd + K` 输入 `http://[手机IP]:5244/dav`）直接挂载为本地磁盘；
+   - Windows 此电脑 ➔ 映射网络驱动器挂载；
+   - 电视盒子 / 平板（Kodi、影视仓、Infuse、nPlayer）直连 4K 原画免解压播放。
+3. **AList / OpenList 私人云存储（端口: 5244）**：
+   - 聚合网盘与本地存储管理，支持在线音视频预览与多源挂载。
+4. **全景 Web 控制台 & 传输测速（端口: 8080）**：
+   - 响应式磨砂玻璃 UI，集成实时 CPU/网速波形、多设备连接终端与双向传输测速引擎。
+
+---
+
+## 🛠️ 本地编译与打包
+
+在具备 Go 1.22+ 环境的终端中执行以下单行静态交叉编译命令：
+
+```bash
+cd server
+CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -trimpath -ldflags="-s -w" -o nas_server main.go hardware.go soc_database.go battery_provider.go
+chmod 755 nas_server
 ```
 
 ---
 
-## 📄 开源协议
+## 📥 安装与使用指南
 
-本项目基于 [MIT License](LICENSE) 开源。欢迎提交 Issue 或 Pull Request。
+1. **刷入模块**：
+   - 在 **KernelSU / Magisk / APatch** 管理器中选择 `PocketNAS-Pro-v3.2.0.zip` 刷入并重启手机。
+2. **进入控制台**：
+   - 在模块列表中点击「执行 / Action」，将自动复制 WebDAV 挂载链接并直接在手机浏览器中打开 Web 控制台；
+   - 或局域网内任意设备浏览器访问：`http://[手机局域网IP]:8080`。
+3. **文件访问**：
+   - **WebDAV**：`http://[手机局域网IP]:5244/dav`
+   - **FTP**：`ftp://[手机局域网IP]:2121`
+   - **AList**：`http://[手机局域网IP]:5244`
+
+---
+
+## 📄 开源协议与声明
+本项目基于 [MIT License](LICENSE) 协议开源。

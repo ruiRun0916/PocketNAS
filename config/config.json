@@ -1,12 +1,9 @@
 {
-  "app_name": "PocketNAS",
+  "app_name": "PocketNAS Pro",
   "port": 8080,
+  "ftp_port": 2121,
   "refresh_seconds": 2,
   "storage_path": "/data/media/0",
   "network_interface": "wlan0",
-  "alist_port": 5244,
-  "mdns": {
-    "enabled": true,
-    "hostname": "pocketnas"
-  }
+  "alist_port": 5244
 }

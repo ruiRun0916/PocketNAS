@@ -1,9 +1,9 @@
 // =========================================================
-// PocketNAS Pro v3.1 - mDNS, Dynamic Client Speedtest & Pure Canvas QR
+// PocketNAS Pro v3.2.0 - Universal Responsive Server Dashboard
+// Battery Health & Wh Primary · Minimalist CPU · Adaptive Polling
 // =========================================================
 
 let currentIP = window.location.hostname || "127.0.0.1";
-let currentMDNSHost = "pocketnas.local";
 let alistUrl = "http://" + currentIP + ":5244";
 
 const cpuHistory = [15, 18, 16, 22, 19, 28, 22, 18, 30, 24, 18, 22, 19, 16, 23, 19, 21, 24, 18, 17];
@@ -17,38 +17,16 @@ let currentThemeMode = localStorage.getItem("pocket_nas_theme") || "auto";
 
 let pollTimer = null;
 let isFetching = false;
-let qrUseMDNS = true;
 
 document.addEventListener("DOMContentLoaded", () => {
   initTheme();
   initTabs();
   init3DTilt();
   initCanvasBuffers();
-  initClientDeviceNames();
   startChainedPolling();
 });
 
-// ================= 1. 动态客户端设备名称识别 (语义修复) =================
-function getClientDeviceName() {
-  const ua = navigator.userAgent || "";
-  if (/iPad/i.test(ua)) return "iPad";
-  if (/iPhone/i.test(ua)) return "iPhone";
-  if (/Macintosh|Mac OS X/i.test(ua)) return "Mac";
-  if (/Windows/i.test(ua)) return "Windows 电脑";
-  if (/Android/i.test(ua)) return "当前手机/平板";
-  if (/Linux/i.test(ua)) return "Linux 客户端";
-  return "当前设备";
-}
-
-function initClientDeviceNames() {
-  const devName = getClientDeviceName();
-  const leftLabel = document.getElementById("st-left-label");
-  const rightLabel = document.getElementById("st-right-label");
-  if (leftLabel) leftLabel.innerText = `${devName} ➔ NAS (上传)`;
-  if (rightLabel) rightLabel.innerText = `NAS ➔ ${devName} (下载)`;
-}
-
-// ================= 2. 链式防堆叠轮询 (前台 2s / 后台 5s) =================
+// ================= 1. 链式防堆叠轮询 (前台 2s / 后台 5s) =================
 function startChainedPolling() {
   if (pollTimer) clearTimeout(pollTimer);
   pollStep();
@@ -71,7 +49,7 @@ document.addEventListener("visibilitychange", () => {
   }
 });
 
-// ================= 3. 三态主题管理 =================
+// ================= 2. 三态主题管理 =================
 function initTheme() {
   window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", (e) => {
     if (currentThemeMode === "auto") {
@@ -107,7 +85,7 @@ function applyTheme(theme) {
   drawNetChart();
 }
 
-// ================= 4. 3D 悬浮物理倾斜动效 =================
+// ================= 3. 3D 悬浮物理倾斜动效 =================
 function init3DTilt() {
   if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
     return;
@@ -144,7 +122,7 @@ function init3DTilt() {
   });
 }
 
-// ================= 5. Tab 切换与导航 =================
+// ================= 4. Tab 切换与导航 =================
 function initTabs() {
   const tabBtns = document.querySelectorAll(".nav-tab-btn");
   tabBtns.forEach((btn) => {
@@ -183,7 +161,13 @@ function switchTab(tabId) {
   }
 }
 
-// ================= 6. 复制功能与 Toast =================
+function reloadAListFrame() {
+  const frame = document.getElementById("alist-frame");
+  if (frame) frame.src = alistUrl;
+  showToast("已刷新 AList 视图");
+}
+
+// ================= 5. 复制功能与 Toast =================
 async function copyText(text, label = "内容") {
   if (!text || text === "--") return;
   try {
@@ -222,99 +206,7 @@ function handleQuickRun() {
   showToast("⚡ 数据已刷新");
 }
 
-function reloadAListFrame() {
-  const frame = document.getElementById("alist-frame");
-  if (frame) {
-    frame.src = alistUrl;
-    showToast("🔄 AList 页面已刷新");
-  }
-}
-
-// ================= 7. 📱 二维码 Canvas 内存实时生成 (0 磁盘 I/O) =================
-function openQRModal() {
-  const overlay = document.getElementById("qr-modal-overlay");
-  if (!overlay) return;
-  renderCurrentQRCode();
-  overlay.classList.add("show");
-}
-
-function closeQRModal(e) {
-  const overlay = document.getElementById("qr-modal-overlay");
-  if (overlay) overlay.classList.remove("show");
-}
-
-function toggleQRTarget() {
-  qrUseMDNS = !qrUseMDNS;
-  renderCurrentQRCode();
-}
-
-function renderCurrentQRCode() {
-  const targetUrl = qrUseMDNS
-    ? `http://${currentMDNSHost}:8080`
-    : `http://${currentIP}:8080`;
-
-  const urlEl = document.getElementById("qr-modal-url");
-  if (urlEl) urlEl.innerText = targetUrl;
-
-  const canvas = document.getElementById("qr-canvas");
-  if (!canvas) return;
-
-  generateCanvasQRCode(canvas, targetUrl);
-}
-
-// 纯 JS 轻量矩阵二维码生成引擎
-function generateCanvasQRCode(canvas, text) {
-  const ctx = canvas.getContext("2d");
-  const size = canvas.width;
-  ctx.clearRect(0, 0, size, size);
-
-  // 绘制纯白背景
-  ctx.fillStyle = "#ffffff";
-  ctx.fillRect(0, 0, size, size);
-
-  // 简易稳定点阵渲染 (基于文本哈希生成高辨识度 QR 矩阵模式)
-  const modulesCount = 29; // 29x29 标准 Version 3 尺寸
-  const cellSize = (size - 16) / modulesCount;
-  const padding = 8;
-
-  ctx.fillStyle = "#000000";
-
-  // 绘制 3 个标准定位角 (Finder Patterns)
-  drawFinderPattern(ctx, padding, padding, cellSize);
-  drawFinderPattern(ctx, padding + (modulesCount - 7) * cellSize, padding, cellSize);
-  drawFinderPattern(ctx, padding, padding + (modulesCount - 7) * cellSize, cellSize);
-
-  // 根据数据生成伪随机但确定性的数据网格
-  let hash = 0;
-  for (let i = 0; i < text.length; i++) {
-    hash = (hash << 5) - hash + text.charCodeAt(i);
-    hash |= 0;
-  }
-
-  for (let r = 0; r < modulesCount; r++) {
-    for (let c = 0; c < modulesCount; c++) {
-      // 跳过定位角区域
-      if ((r < 8 && c < 8) || (r < 8 && c >= modulesCount - 8) || (r >= modulesCount - 8 && c < 8)) {
-        continue;
-      }
-      // 产生数据位
-      const bit = ((hash ^ (r * 31 + c * 17) ^ (text.charCodeAt((r + c) % text.length) * 7)) >>> ( (r + c) % 16 )) & 1;
-      if (bit === 1) {
-        ctx.fillRect(padding + c * cellSize, padding + r * cellSize, cellSize - 0.5, cellSize - 0.5);
-      }
-    }
-  }
-}
-
-function drawFinderPattern(ctx, x, y, cellSize) {
-  ctx.fillRect(x, y, 7 * cellSize, 7 * cellSize);
-  ctx.fillStyle = "#ffffff";
-  ctx.fillRect(x + cellSize, y + cellSize, 5 * cellSize, 5 * cellSize);
-  ctx.fillStyle = "#000000";
-  ctx.fillRect(x + 2 * cellSize, y + 2 * cellSize, 3 * cellSize, 3 * cellSize);
-}
-
-// ================= 8. Canvas 折线波形优化 =================
+// ================= 6. Canvas 折线波形缓冲 =================
 function initCanvasBuffers() {
   resizeAllCanvas();
   window.addEventListener("resize", resizeAllCanvas);
@@ -327,7 +219,7 @@ function resizeAllCanvas() {
     if (canvas && canvas.parentElement) {
       const rect = canvas.parentElement.getBoundingClientRect();
       canvas.width = (rect.width || 300) * dpr;
-      canvas.height = (rect.height || 44) * dpr;
+      canvas.height = (rect.height || 48) * dpr;
     }
   });
   drawCpuChart();
@@ -457,7 +349,7 @@ function drawNetChart() {
   renderSmoothSpline(ctx, upPts, w, h, upLineColor, "transparent", 1.5 * (window.devicePixelRatio || 1));
 }
 
-// ================= 9. ⚡ 传输速度测试 (支持随时取消 · 严格语义绑定) =================
+// ================= 7. ⚡ 传输速度测试 =================
 function updateGauge(gaugeId, speed) {
   const arc = document.getElementById(gaugeId);
   if (!arc) return;
@@ -488,7 +380,6 @@ async function runSpeedtest() {
   const jitterEl = document.getElementById("st-jitter-val");
   const downEl = document.getElementById("st-down-val");
   const upEl = document.getElementById("st-up-val");
-  const devName = getClientDeviceName();
 
   if (btn) {
     btn.innerText = "⏹ 停止测速";
@@ -501,8 +392,8 @@ async function runSpeedtest() {
   updateGauge("gauge-up-arc", 0);
 
   try {
-    // ----------------- 阶段 1: Ping & Jitter -----------------
-    if (msg) msg.innerText = `正在探测 ${devName} 与 NAS 间的网络延迟与抖动...`;
+    // 阶段 1: Ping & Jitter
+    if (msg) msg.innerText = `正在探测与 NAS 间的网络延迟与抖动...`;
     const rtts = [];
     for (let i = 0; i < 10; i++) {
       if (speedtestAbortCtrl.signal.aborted) break;
@@ -525,16 +416,16 @@ async function runSpeedtest() {
       if (jitterEl) jitterEl.innerText = avgJitter.toFixed(2);
     }
 
-    // ----------------- 阶段 2: 上行写入测试 (左侧: 客户端 -> NAS, 持续 6 秒) -----------------
+    // 阶段 2: 上行写入测试 (客户端 -> NAS, 持续 6 秒)
     const TEST_DURATION_MS = 6000;
-    if (msg) msg.innerText = `正在测试「${devName} ➔ NAS」上行写入速度 (持续 6 秒)...`;
+    if (msg) msg.innerText = `正在测试「客户端 ➔ NAS」上行写入速度 (持续 6 秒)...`;
 
     const upStartTime = performance.now();
     let totalUpBytes = 0;
     let lastUpTime = performance.now();
     let lastUpBytes = 0;
 
-    const uploadChunkSize = 2 * 1024 * 1024; // 2MB 块
+    const uploadChunkSize = 2 * 1024 * 1024;
     const uploadChunk = new Uint8Array(uploadChunkSize);
     for (let i = 0; i < uploadChunk.length; i++) uploadChunk[i] = i % 256;
 
@@ -553,14 +444,14 @@ async function runSpeedtest() {
 
       if (now - lastUpTime >= 100) {
         const deltaSec = (now - lastUpTime) / 1000;
-        const deltaMb = (totalUpBytes - lastUpBytes) / 1000000; // 统一标准 MB/s
+        const deltaMb = (totalUpBytes - lastUpBytes) / 1000000;
         const instSpeed = deltaMb / deltaSec;
 
         if (upEl) upEl.innerText = instSpeed.toFixed(2);
         updateGauge("gauge-up-arc", instSpeed);
 
         const remainSec = Math.max(0, (TEST_DURATION_MS - elapsed) / 1000).toFixed(1);
-        if (msg) msg.innerText = `正在测试「${devName} ➔ NAS」上行写入 (剩余 ${remainSec}s)...`;
+        if (msg) msg.innerText = `正在测试「客户端 ➔ NAS」上行写入 (剩余 ${remainSec}s)...`;
 
         lastUpTime = now;
         lastUpBytes = totalUpBytes;
@@ -578,9 +469,9 @@ async function runSpeedtest() {
 
     await new Promise((r) => setTimeout(r, 400));
 
-    // ----------------- 阶段 3: 下行读取测试 (右侧: NAS -> 客户端, 持续 6 秒) -----------------
+    // 阶段 3: 下行读取测试 (NAS -> 客户端, 持续 6 秒)
     if (!speedtestAbortCtrl.signal.aborted) {
-      if (msg) msg.innerText = `正在测试「NAS ➔ ${devName}」下行读取速度 (持续 6 秒)...`;
+      if (msg) msg.innerText = `正在测试「NAS ➔ 客户端」下行读取速度 (持续 6 秒)...`;
 
       const downStartTime = performance.now();
       let totalDownBytes = 0;
@@ -615,7 +506,7 @@ async function runSpeedtest() {
             updateGauge("gauge-down-arc", instSpeed);
 
             const remainSec = Math.max(0, (TEST_DURATION_MS - elapsed) / 1000).toFixed(1);
-            if (msg) msg.innerText = `正在测试「NAS ➔ ${devName}」下行读取 (剩余 ${remainSec}s)...`;
+            if (msg) msg.innerText = `正在测试「NAS ➔ 客户端」下行读取 (剩余 ${remainSec}s)...`;
 
             lastDownTime = now;
             lastDownBytes = totalDownBytes;
@@ -646,7 +537,7 @@ async function runSpeedtest() {
           updateGauge("gauge-down-arc", instSpeed);
 
           const remainSec = Math.max(0, (TEST_DURATION_MS - elapsed) / 1000).toFixed(1);
-          if (msg) msg.innerText = `正在测试「NAS ➔ ${devName}」下行读取 (剩余 ${remainSec}s)...`;
+          if (msg) msg.innerText = `正在测试「NAS ➔ 客户端」下行读取 (剩余 ${remainSec}s)...`;
 
           if (elapsed >= TEST_DURATION_MS) {
             break;
@@ -660,7 +551,7 @@ async function runSpeedtest() {
       updateGauge("gauge-down-arc", finalDownSpeed);
 
       if (msg) {
-        msg.innerHTML = `✅ <strong>测速完成</strong> · 上传(${devName}➔NAS): ${finalUpSpeed.toFixed(2)} MB/s | 下载(NAS➔${devName}): ${finalDownSpeed.toFixed(2)} MB/s`;
+        msg.innerHTML = `✅ <strong>测速完成</strong> · 上传: ${finalUpSpeed.toFixed(2)} MB/s | 下载: ${finalDownSpeed.toFixed(2)} MB/s`;
       }
       showToast("🎉 传输速度测试完成");
     }
@@ -681,8 +572,8 @@ async function runSpeedtest() {
   }
 }
 
-// ================= 10. 数据拉取与全量渲染 =================
-async function fetchStatus() {
+// ================= 8. 数据拉取与全量动态渲染 =================
+async function fetchStatus(isManual = false) {
   try {
     const reqUrl = "/api/status?t=" + Date.now();
     let res = await fetch(reqUrl).catch(() => null);
@@ -695,63 +586,31 @@ async function fetchStatus() {
     if (data.network && data.network.ip && data.network.ip !== "127.0.0.1") {
       currentIP = data.network.ip;
     }
-    if (data.mdns && data.mdns.hostname) {
-      currentMDNSHost = data.mdns.hostname;
-    }
-    alistUrl = `http://${currentMDNSHost}:5244`;
+    alistUrl = `http://${currentIP}:5244`;
 
-    const openAlistBtn = document.getElementById("btn-open-alist");
-    if (openAlistBtn) openAlistBtn.href = alistUrl;
-    const openAlistNet = document.getElementById("btn-open-alist-net");
-    if (openAlistNet) openAlistNet.href = alistUrl;
-
-    // 1. 顶部 Header
+    // 1. 顶部 Header 动态设备型号识别
     if (data.device) {
-      const devNameEl = document.getElementById("dev-name");
-      if (devNameEl) {
-        devNameEl.innerHTML = `<span>${data.device} · PocketNAS</span> <span class="glow-pill green" style="font-size:10px; padding:1px 5px;">● 在线</span>`;
+      const brandModel = data.device.market_name || data.device.model || "Android Device";
+      const brandModelEl = document.getElementById("header-brand-model");
+      if (brandModelEl) brandModelEl.innerText = brandModel;
+
+      const devSub = document.getElementById("dev-sub");
+      if (devSub) {
+        const socTag = data.cpu?.model || "ARM64";
+        devSub.innerText = `${brandModel} · ${socTag} · ${data.device.android_version || 'Android'} · KernelSU Root`;
       }
     }
-    if (data.cpu && data.cpu.model) {
-      const devSub = document.getElementById("dev-sub");
-      if (devSub) devSub.innerText = `${data.cpu.model} · ${data.system || "Android"} · KernelSU Root`;
-      const cpuModelTag = document.getElementById("cpu-model-tag");
-      if (cpuModelTag) cpuModelTag.innerText = data.cpu.model;
-    }
+
     if (data.uptime) {
       const upEl = document.getElementById("uptime-badge");
-      if (upEl) upEl.innerHTML = `<span>⏱️ 运行: ${data.uptime}</span>`;
+      if (upEl) upEl.innerText = data.uptime;
     }
     if (data.time) {
       const timeEl = document.getElementById("last-update");
       if (timeEl) timeEl.innerText = `更新: ${data.time}`;
     }
 
-    // 2. mDNS 局域网访问卡片渲染
-    const mdnsUrlVal = document.getElementById("mdns-url-val");
-    if (mdnsUrlVal) mdnsUrlVal.innerText = `http://${currentMDNSHost}:8080`;
-
-    const lanIpVal = document.getElementById("lan-ip-val");
-    if (lanIpVal) lanIpVal.innerText = currentIP;
-
-    const lanIfaceVal = document.getElementById("lan-iface-val");
-    if (lanIfaceVal) lanIfaceVal.innerText = `${data.network?.interface || 'wlan0'} (物理网卡)`;
-
-    const mdnsBadge = document.getElementById("mdns-status-badge");
-    if (mdnsBadge) {
-      if (data.mdns && data.mdns.status) {
-        mdnsBadge.className = "status-tag ok";
-        mdnsBadge.innerText = "🟢 mDNS 运行中";
-      } else {
-        mdnsBadge.className = "status-tag wait";
-        mdnsBadge.innerText = "🟡 备用 IP 模式";
-      }
-    }
-
-    const netMdnsHead = document.getElementById("net-mdns-head");
-    if (netMdnsHead) netMdnsHead.innerText = currentMDNSHost;
-
-    // 3. 内部存储
+    // 2. 存储空间 (数字优先: 344.9 GB / 463.0 GB)
     if (data.storage) {
       const sPctStr = data.storage.percent;
       let sPct = parseFloat(sPctStr);
@@ -768,7 +627,7 @@ async function fetchStatus() {
       const sTotal = document.getElementById("storage-total");
       if (sUsed) sUsed.innerText = data.storage.used || "--";
       if (sFree) sFree.innerText = data.storage.free || "--";
-      if (sTotal) sTotal.innerText = data.storage.total || "--";
+      if (sTotal) sTotal.innerText = data.storage.total ? `/ ${data.storage.total}` : "/ --";
 
       const sTotalDet = document.getElementById("storage-total-detail");
       const sUsedDet = document.getElementById("storage-used-detail");
@@ -778,7 +637,7 @@ async function fetchStatus() {
       if (sFreeDet) sFreeDet.innerText = data.storage.free || "--";
     }
 
-    // 4. 运行内存
+    // 3. 运行内存 (数字优先)
     if (data.memory) {
       const rPct = data.memory.percent || 0;
       const rBadge = document.getElementById("ram-pct-badge");
@@ -789,8 +648,10 @@ async function fetchStatus() {
 
       const rUsed = document.getElementById("ram-used");
       const rFree = document.getElementById("ram-free");
+      const rTotal = document.getElementById("ram-total");
       if (rUsed) rUsed.innerText = data.memory.used || "--";
       if (rFree) rFree.innerText = data.memory.free || "--";
+      if (rTotal) rTotal.innerText = data.memory.total ? `/ ${data.memory.total}` : "/ --";
 
       const zEl = document.getElementById("zram-used");
       if (zEl) zEl.innerText = data.memory.zram || "--";
@@ -798,24 +659,64 @@ async function fetchStatus() {
       if (cEl) cEl.innerText = data.memory.cached || "--";
     }
 
-    // 5. CPU 核心与负载
-    let cpuUsage = 0;
+    // 4. ⚡ 动态 CPU / SoC 架构卡片 (极简实用：动态核心组平均负载、系统负载与SoC温度)
     if (data.cpu) {
-      cpuUsage = data.cpu.usage || 0;
-
-      const cBadge = document.getElementById("cpu-pct-badge");
-      if (cBadge) cBadge.innerText = `${cpuUsage}% 负载`;
-
-      const cBarFill = document.getElementById("cpu-bar-fill");
-      if (cBarFill) cBarFill.style.width = cpuUsage + "%";
+      const cpuUsage = data.cpu.usage || 0;
 
       const cValSub = document.getElementById("cpu-val-sub");
       if (cValSub) cValSub.innerText = `${cpuUsage}%`;
 
+      const cBarFill = document.getElementById("cpu-bar-fill");
+      if (cBarFill) cBarFill.style.width = cpuUsage + "%";
+
+      const chartPct = document.getElementById("cpu-chart-pct");
+      if (chartPct) chartPct.innerText = `${cpuUsage}%`;
+
+      // 动态显示 SoC 真实名称 (绝不硬编码)
+      const socFullName = document.getElementById("soc-full-name");
+      if (socFullName) {
+        const vendor = data.cpu.vendor && data.cpu.vendor !== "Generic" ? data.cpu.vendor + " " : "";
+        socFullName.innerText = `${vendor}${data.cpu.model || 'ARM64 Processor'}`;
+      }
+
+      // 动态生成核心组平均利用率矩阵 (例如 A55 24% 4 Core)
+      const clusterBox = document.getElementById("cpu-clusters-container");
+      if (clusterBox) {
+        if (data.cpu.clusters && data.cpu.clusters.length > 0) {
+          let clustHtml = "";
+          let archParts = [];
+
+          data.cpu.clusters.forEach((c) => {
+            const shortName = c.short_name || c.core_model || 'Core';
+            const uVal = c.usage !== undefined && c.usage >= 0 ? `${c.usage}%` : "--%";
+            clustHtml += `
+              <div class="cluster-row-item">
+                <span class="c-name">${shortName}</span>
+                <span class="c-usage">${uVal}</span>
+                <span class="c-cores">${c.cores} Core</span>
+              </div>
+            `;
+            archParts.push(`${c.cores}×${shortName}`);
+          });
+          clusterBox.innerHTML = clustHtml;
+
+          const archSummary = document.getElementById("cpu-arch-summary");
+          if (archSummary) {
+            archSummary.innerText = `架构: ${archParts.join(" + ")}`;
+          }
+        } else {
+          clusterBox.innerHTML = `
+            <div class="cluster-row-item">
+              <span class="c-name">核心状态</span>
+              <span class="c-usage">核心架构信息暂不可用</span>
+              <span class="c-cores">--</span>
+            </div>
+          `;
+        }
+      }
+
       const lText = document.getElementById("loadavg-text");
       if (lText) lText.innerText = data.loadavg || "--";
-      const tText = document.getElementById("tasks-text");
-      if (tText) tText.innerText = data.tasks || "--";
 
       cpuHistory.shift();
       cpuHistory.push(cpuUsage);
@@ -825,35 +726,102 @@ async function fetchStatus() {
     const cpuTempBadge = document.getElementById("cpu-temp-badge");
     if (cpuTempBadge) {
       if (data.temperature && data.temperature.cpu) {
-        cpuTempBadge.innerText = `SoC: ${data.temperature.cpu}℃`;
+        cpuTempBadge.innerText = `${data.temperature.cpu}°C`;
       } else {
-        cpuTempBadge.innerText = `SoC: --℃`;
+        cpuTempBadge.innerText = `--°C`;
       }
     }
 
-    // 6. 电池侧功率与供电
+    // 5. 🔋 电池与真实健康卡片 (Wh为主，mAh为辅，健康度/健康容量/循环次数/平滑续航)
     if (data.battery) {
       const pVal = data.battery.power || "-- W";
-      const isCharging = data.battery.charging ? " (⚡充电)" : data.battery.level ? " (供电)" : "--";
-      const bLevel = data.battery.level ? `${data.battery.level}%` : "--";
-      const vVal = data.battery.voltage || "--";
-      const iVal = data.battery.current || "--";
-      const batTemp = data.battery.temperature ? `${data.battery.temperature}℃` : "--℃";
-
       const powerMainVal = document.getElementById("power-main-val");
       if (powerMainVal) powerMainVal.innerText = pVal;
 
-      const powerStatus = document.getElementById("power-status");
-      if (powerStatus) powerStatus.innerText = bLevel !== "--" ? bLevel + isCharging : "--";
+      const batLevelVal = document.getElementById("bat-level-val");
+      if (batLevelVal) batLevelVal.innerText = data.battery.level ? `${data.battery.level}%` : "--%";
 
-      const batTempEl = document.getElementById("bat-temp-val");
-      if (batTempEl) batTempEl.innerText = batTemp;
+      const batBarFill = document.getElementById("bat-bar-fill");
+      if (batBarFill && data.battery.level) {
+        const pct = parseInt(data.battery.level) || 0;
+        batBarFill.style.width = pct + "%";
+      }
 
+      // 电池健康度
+      const batHealthPct = document.getElementById("bat-health-pct");
+      if (batHealthPct) batHealthPct.innerText = data.battery.health_percent || "--";
+
+      // 健康容量 (Wh 与 mAh)
+      const batHealthWh = document.getElementById("bat-health-wh");
+      const batHealthMah = document.getElementById("bat-health-mah");
+      if (batHealthWh) {
+        if (data.battery.health_energy_wh > 0) {
+          batHealthWh.innerText = `${data.battery.health_energy_wh.toFixed(1)} Wh`;
+        } else {
+          batHealthWh.innerText = `-- Wh`;
+        }
+      }
+      if (batHealthMah) {
+        if (data.battery.health_capacity_mah > 0) {
+          batHealthMah.innerText = `≈ ${data.battery.health_capacity_mah} mAh`;
+        } else {
+          batHealthMah.innerText = `≈ -- mAh`;
+        }
+      }
+
+      // 设计容量 (Wh 与 mAh)
+      const batDesignWh = document.getElementById("bat-design-wh");
+      const batDesignMah = document.getElementById("bat-design-mah");
+      if (batDesignWh) {
+        if (data.battery.design_energy_wh > 0) {
+          batDesignWh.innerText = `${data.battery.design_energy_wh.toFixed(1)} Wh`;
+        } else {
+          batDesignWh.innerText = `-- Wh`;
+        }
+      }
+      if (batDesignMah) {
+        if (data.battery.design_capacity_mah > 0) {
+          batDesignMah.innerText = `≈ ${data.battery.design_capacity_mah} mAh`;
+        } else {
+          batDesignMah.innerText = `≈ -- mAh`;
+        }
+      }
+
+      // 循环次数
+      const batCycleCount = document.getElementById("bat-cycle-count");
+      if (batCycleCount) batCycleCount.innerText = data.battery.cycle_count || "未知";
+
+      // 电压 · 电流
       const powerViVal = document.getElementById("power-vi-val");
-      if (powerViVal) powerViVal.innerText = `${vVal} · ${iVal}`;
+      if (powerViVal) powerViVal.innerText = `${data.battery.voltage || '--'} · ${data.battery.current || '--'}`;
+
+      // 电池温度
+      const batTempEl = document.getElementById("bat-temp-val");
+      if (batTempEl) batTempEl.innerText = data.battery.temperature ? `${data.battery.temperature}°C` : "--°C";
+
+      // 供电状态与续航指示
+      const statusBadge = document.getElementById("bat-status-badge");
+      const batEnduranceVal = document.getElementById("bat-endurance-val");
+
+      if (data.battery.charging) {
+        if (statusBadge) statusBadge.innerText = data.battery.charging_status_text ? `⚡ ${data.battery.charging_status_text}` : "⚡ 充电中";
+        if (batEnduranceVal) {
+          const chgP = data.battery.charging_power ? ` (功率: ${data.battery.charging_power})` : "";
+          batEnduranceVal.innerHTML = `<span style="color:var(--accent-orange);">⚡ ${data.battery.charging_status_text || '充电中'}${chgP}</span>`;
+        }
+      } else {
+        if (statusBadge) statusBadge.innerText = "电池供电";
+        if (batEnduranceVal) {
+          if (data.battery.estimated_endurance) {
+            batEnduranceVal.innerText = `预计剩余: ${data.battery.estimated_endurance}`;
+          } else {
+            batEnduranceVal.innerText = "电池放电中";
+          }
+        }
+      }
     }
 
-    // 7. 网络速率与设备连接地址 (优先使用 mDNS 域名)
+    // 6. 网络速率与设备连接地址
     if (data.network) {
       const downEl = document.getElementById("net-down");
       const upEl = document.getElementById("net-up");
@@ -892,12 +860,11 @@ async function fetchStatus() {
         const netIpHead = document.getElementById("net-ip-head");
         if (netIpHead) netIpHead.innerText = data.network.ip;
 
-        // 更新核心连接地址 (默认展示稳定的 mDNS 域名)
-        setCopyVal("webdav-url-copy-val", `http://${currentMDNSHost}:5244/dav`);
-        setCopyVal("ftp-url-copy-val", `ftp://${currentMDNSHost}:2121`);
-        setCopyVal("alist-url-copy-val", `http://${currentMDNSHost}:5244`);
-        setCopyVal("webui-url-copy-val", `http://${currentMDNSHost}:8080`);
-        setCopyVal("ssh-url-copy-val", `ssh root@${currentMDNSHost} -p 22`);
+        setCopyVal("webdav-url-copy-val", `http://${data.network.ip}:5244/dav`);
+        setCopyVal("ftp-url-copy-val", `ftp://${data.network.ip}:2121`);
+        setCopyVal("alist-url-copy-val", `http://${data.network.ip}:5244`);
+        setCopyVal("webui-url-copy-val", `http://${data.network.ip}:8080`);
+        setCopyVal("ssh-url-copy-val", `ssh root@${data.network.ip} -p 22`);
       }
 
       if (data.network.interface) {
@@ -913,12 +880,12 @@ async function fetchStatus() {
       if (mtuEl) mtuEl.innerText = `${data.network.mtu || 1500} Bytes`;
     }
 
-    // 8. 核心协议状态指示
+    // 7. 核心协议状态指示
     if (data.protocols) {
       updateServiceBadge("srv-alist", data.protocols.alist?.status);
       updateServiceBadge("srv-ftp", data.protocols.ftp?.status);
+      updateServiceBadge("srv-webdav", data.protocols.webdav?.status);
       updateServiceBadge("srv-ssh", data.protocols.ssh?.status);
-      updateServiceBadge("srv-aria2", data.protocols.aria2?.status);
 
       if (data.protocols.ftp?.port) {
         const fp = document.getElementById("srv-ftp-port");
@@ -926,7 +893,7 @@ async function fetchStatus() {
       }
     }
 
-    // 9. 系统内核与 NAS 健康
+    // 8. 系统内核与 NAS 健康
     if (data.kernel) {
       const kTag = document.getElementById("kernel-tag");
       if (kTag) kTag.innerText = data.kernel;
@@ -939,7 +906,8 @@ async function fetchStatus() {
     const healthBadge = document.getElementById("health-badge");
     if (healthBadge) {
       let score = 100;
-      if (cpuUsage > 70) score -= 8;
+      const curCpu = data.cpu?.usage || 0;
+      if (curCpu > 70) score -= 8;
       const cTemp = parseFloat(data.temperature?.cpu) || 0;
       if (cTemp > 65) score -= 10;
       score = Math.max(75, Math.min(100, score));
@@ -955,10 +923,10 @@ function updateServiceBadge(elId, isActive) {
   if (!el) return;
   if (isActive) {
     el.className = "status-tag ok";
-    el.innerText = "● 运行中";
+    el.innerText = "● 运行";
   } else {
     el.className = "status-tag wait";
-    el.innerText = "○ 待启动";
+    el.innerText = "○ 未运行";
   }
 }
 

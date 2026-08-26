@@ -1,6 +1,6 @@
 // =========================================================
-// PocketNAS Pro v3.2.2-beta1 - Universal Responsive Server Dashboard
-// Battery Health & Wh Primary · Minimalist CPU · Ecosystem B Linkage
+// PocketNAS Pro v3.2.3 - Universal Responsive Server Dashboard
+// Dynamic External URL Linkage · Battery Health & Wh Primary
 // =========================================================
 
 let currentIP = window.location.hostname || "127.0.0.1";
@@ -24,8 +24,21 @@ document.addEventListener("DOMContentLoaded", () => {
   initTabs();
   init3DTilt();
   initCanvasBuffers();
+  updateExternalLinks();
   startChainedPolling();
 });
+
+// ================= 0. 动态更新所有外部跳转链接 (指向当前设备局域网 IP) =================
+function updateExternalLinks() {
+  const btnOpenAListNet = document.getElementById("btn-open-alist-net");
+  if (btnOpenAListNet) btnOpenAListNet.href = alistUrl;
+
+  const btnOpenAList = document.getElementById("btn-open-alist");
+  if (btnOpenAList) btnOpenAList.href = alistUrl;
+
+  const btnOpenFSend = document.getElementById("btn-open-fsend");
+  if (btnOpenFSend) btnOpenFSend.href = fsendUrl;
+}
 
 // ================= 1. 链式防堆叠轮询 (前台 2s / 后台 5s) =================
 function startChainedPolling() {
@@ -601,12 +614,14 @@ async function fetchStatus(isManual = false) {
 
     if (data.network && data.network.ip && data.network.ip !== "127.0.0.1") {
       currentIP = data.network.ip;
+    } else if (window.location.hostname && window.location.hostname !== "localhost" && window.location.hostname !== "127.0.0.1") {
+      currentIP = window.location.hostname;
     }
     alistUrl = `http://${currentIP}:5244`;
     fsendUrl = `http://${currentIP}:2333`;
 
-    const btnOpenFSend = document.getElementById("btn-open-fsend");
-    if (btnOpenFSend) btnOpenFSend.href = fsendUrl;
+    // 同步更新所有外部打开链接
+    updateExternalLinks();
 
     // 1. 顶部 Header 动态设备型号识别
     if (data.device) {
@@ -841,7 +856,7 @@ async function fetchStatus(isManual = false) {
       }
     }
 
-    // 6. 网络速率与设备连接地址 (动态更新全量链接)
+    // 6. 网络速率与设备连接地址
     if (data.network) {
       const downEl = document.getElementById("net-down");
       const upEl = document.getElementById("net-up");
@@ -885,12 +900,6 @@ async function fetchStatus(isManual = false) {
         setCopyVal("alist-url-copy-val", `http://${data.network.ip}:5244`);
         setCopyVal("webui-url-copy-val", `http://${data.network.ip}:8080`);
         setCopyVal("ssh-url-copy-val", `ssh root@${data.network.ip} -p 22`);
-        
-        // 动态更新 SMB 链接 (多系统工具箱) 与文件闪传链接
-        setCopyVal("smb-win-url-val", `\\\\${data.network.ip}\\`);
-        setCopyVal("smb-mac-url-val", `smb://${data.network.ip}`);
-        setCopyVal("fsend-ip-url-val", `http://${data.network.ip}:2333`);
-        setCopyVal("fsend-domain-url-val", `http://fsend.cn`);
       }
 
       if (data.network.interface) {

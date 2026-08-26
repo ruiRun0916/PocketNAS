@@ -1,10 +1,10 @@
 #!/system/bin/sh
 ui_print "************************************"
-ui_print "    口袋 NAS · PocketNAS Pro v3.2.2    "
+ui_print "    口袋 NAS · PocketNAS Pro v3.2.3    "
 ui_print "  PC大屏响应式 & 真实电池健康度升级  "
 ui_print "          Author: ruiRun0916        "
 ui_print "************************************"
-ui_print "- 正在安装 PocketNAS Pro v3.2.2..."
+ui_print "- 正在安装 PocketNAS Pro v3.2.3..."
 
 # 递归设置标准权限
 set_perm_recursive $MODPATH 0 0 0755 0644

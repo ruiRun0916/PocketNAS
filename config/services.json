@@ -1,0 +1,62 @@
+[
+  {
+    "id": "alist",
+    "name": "AList / OpenList",
+    "builtin": true,
+    "process": "droid.alistlite",
+    "port": 5244,
+    "detect": "PROCESS_OR_PORT",
+    "web": true,
+    "web_url": "http://{ip}:5244",
+    "description": "多网盘聚合与本地文件在线音视频预览",
+    "enabled": true
+  },
+  {
+    "id": "webdav",
+    "name": "WebDAV 挂载服务",
+    "builtin": true,
+    "process": "droid.alistlite",
+    "port": 5244,
+    "detect": "PORT",
+    "web": true,
+    "web_url": "http://{ip}:5244/dav",
+    "description": "Mac 访达 / Win 磁盘映射 / 电视 4K 播放协议",
+    "enabled": true
+  },
+  {
+    "id": "ftp",
+    "name": "原生安全 FTP",
+    "builtin": true,
+    "process": "nas_server",
+    "port": 2121,
+    "detect": "PROCESS_OR_PORT",
+    "web": false,
+    "web_url": "ftp://{ip}:2121",
+    "description": "24/7 局域网高速免密文件传输与全盘读写",
+    "enabled": true
+  },
+  {
+    "id": "smb",
+    "name": "Samba / SMB 共享",
+    "builtin": true,
+    "process": "smbd0",
+    "port": 445,
+    "detect": "PORT",
+    "web": false,
+    "web_url": "\\\\{ip}\\PocketNAS",
+    "description": "Windows 网络邻居与通用局域网 SMB 共享",
+    "enabled": true
+  },
+  {
+    "id": "ssh",
+    "name": "SSH / SFTP 终端",
+    "builtin": true,
+    "process": "sshd",
+    "port": 22,
+    "detect": "PORT",
+    "web": false,
+    "web_url": "ssh root@{ip} -p 22",
+    "description": "Android Root Shell 远程加密运维与终端交互",
+    "enabled": true
+  }
+]

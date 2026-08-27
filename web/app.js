@@ -28,6 +28,32 @@ document.addEventListener("DOMContentLoaded", () => {
   startChainedPolling();
 });
 
+
+// ================= 0.1 触发后台存储分类重新统计 =================
+async function triggerStorageRescan() {
+  const btn = document.getElementById("btn-trigger-rescan");
+  const tag = document.getElementById("storage-scan-status-tag");
+  if (btn) btn.disabled = true;
+  if (tag) {
+    tag.className = "status-tag wait";
+    tag.innerText = "○ 正在扫描中...";
+  }
+  showToast("已启动后台全盘存储分析...");
+
+  try {
+    const res = await fetch("/api/storage/rescan", { method: "POST" });
+    if (res.ok) {
+      setTimeout(fetchStatus, 1500);
+    }
+  } catch (err) {
+    console.error("Rescan trigger error:", err);
+  } finally {
+    setTimeout(() => {
+      if (btn) btn.disabled = false;
+    }, 3000);
+  }
+}
+
 // ================= 0. 动态更新所有外部跳转链接 (指向当前设备局域网 IP) =================
 function updateExternalLinks() {
   const btnOpenAListNet = document.getElementById("btn-open-alist-net");
@@ -671,6 +697,55 @@ async function fetchStatus(isManual = false) {
       if (sUsedDet) sUsedDet.innerText = sPctStr ? `${data.storage.used} (${sPctStr}%)` : data.storage.used || "--";
       if (sFreeDet) sFreeDet.innerText = data.storage.free || "--";
     }
+
+    // 2.1 小米风格多维存储分类渲染
+    if (data.storage_categories) {
+      const sc = data.storage_categories;
+      const heroDesc = document.getElementById("storage-hero-desc");
+      if (heroDesc) {
+        const u = sc.total_used_format || (data.storage ? data.storage.used : "--");
+        const f = sc.total_free_format || (data.storage ? data.storage.free : "--");
+        const t = sc.total_size_format || (data.storage ? data.storage.total : "--");
+        heroDesc.innerText = `已使用 ${u}，剩余 ${f}，共 ${t}`;
+      }
+
+      if (sc.categories && sc.categories.length > 0) {
+        sc.categories.forEach(item => {
+          const el = document.getElementById(`cat-size-${item.id}`);
+          if (el) {
+            el.innerText = item.size_format;
+          }
+          const segMap = {
+            "app": ".seg-app", "image": ".seg-img", "audio": ".seg-aud",
+            "video": ".seg-vid", "apk": ".seg-apk", "doc": ".seg-doc",
+            "archive": ".seg-arch", "other": ".seg-oth"
+          };
+          const segSelector = segMap[item.id] || `.seg-${item.id}`;
+          const segEl = document.querySelector(segSelector);
+          if (segEl) {
+            segEl.style.width = item.percent > 0 ? Math.max(0.6, item.percent).toFixed(1) + "%" : "0%";
+            segEl.title = `${item.name}: ${item.size_format} (${item.percent.toFixed(1)}%)`;
+          }
+        });
+      }
+
+      const scanTimeEl = document.getElementById("storage-last-scan-time");
+      if (scanTimeEl) {
+        scanTimeEl.innerText = `上次扫描: ${sc.last_scan_time || '尚未完成'}`;
+      }
+
+      const scanTag = document.getElementById("storage-scan-status-tag");
+      if (scanTag) {
+        if (sc.is_scanning) {
+          scanTag.className = "status-tag wait";
+          scanTag.innerText = "○ 正在扫描中...";
+        } else {
+          scanTag.className = "status-tag ok";
+          scanTag.innerText = "● 数据已就绪";
+        }
+      }
+    }
+
 
     // 3. 运行内存 (数字优先)
     if (data.memory) {

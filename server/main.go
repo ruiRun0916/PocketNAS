@@ -19,9 +19,8 @@ import (
 )
 
 // =========================================================
-// PocketNAS Pro v3.2.2 - Universal Android Hardware & NAS Daemon
-// Pure Go · Zero-Fork In-Memory Metrics · Dynamic Battery & SoC
-// Dual Active/Passive Full VPN & Hotspot Compatible FTP Engine
+// PocketNAS Pro v3.3.0 - Universal Android Hardware & NAS Daemon
+// Pure Go · Zero-Fork In-Memory Metrics · Storage Analytics
 // =========================================================
 
 type Config struct {
@@ -100,21 +99,22 @@ type DeviceInfo struct {
 }
 
 type StatusSnapshot struct {
-	Device      DeviceInfo                `json:"device"`
-	System      string                    `json:"system"`
-	Kernel      string                    `json:"kernel"`
-	SELinux     string                    `json:"selinux"`
-	Uptime      string                    `json:"uptime"`
-	LoadAvg     string                    `json:"loadavg"`
-	Tasks       string                    `json:"tasks"`
-	Storage     StorageInfo               `json:"storage"`
-	Memory      MemoryInfo                `json:"memory"`
-	CPU         CPUInfo                   `json:"cpu"`
-	Temperature TempInfo                  `json:"temperature"`
-	Network     NetworkInfo               `json:"network"`
-	Protocols   map[string]ProtocolStatus `json:"protocols"`
-	Battery     BatteryHealthInfo         `json:"battery"`
-	Time        string                    `json:"time"`
+	Device            DeviceInfo                `json:"device"`
+	System            string                    `json:"system"`
+	Kernel            string                    `json:"kernel"`
+	SELinux           string                    `json:"selinux"`
+	Uptime            string                    `json:"uptime"`
+	LoadAvg           string                    `json:"loadavg"`
+	Tasks             string                    `json:"tasks"`
+	Storage           StorageInfo               `json:"storage"`
+	StorageCategories StorageDetailSnapshot     `json:"storage_categories"`
+	Memory            MemoryInfo                `json:"memory"`
+	CPU               CPUInfo                   `json:"cpu"`
+	Temperature       TempInfo                  `json:"temperature"`
+	Network           NetworkInfo               `json:"network"`
+	Protocols         map[string]ProtocolStatus `json:"protocols"`
+	Battery           BatteryHealthInfo         `json:"battery"`
+	Time              string                    `json:"time"`
 }
 
 var (
@@ -238,7 +238,7 @@ func getPhysicalLANIP() (net.IP, string) {
 			}
 
 			if ip != nil && ip.To4() != nil && !ip.IsLoopback() {
-				if strings.HasPrefix(name, "wlan") || strings.HasPrefix(name, "eth") || strings.HasPrefix(name, "ap") || strings.HasPrefix(name, "rndis") {
+				if strings.HasPrefix(name, "wlan") || strings.HasPrefix(name, "eth") {
 					return ip.To4(), iface.Name
 				}
 				if fallbackIP == nil {
@@ -283,6 +283,7 @@ func startMetricsCollector(storagePath string) {
 		Clusters:  GlobalHardwareInfo.Clusters,
 	}
 	currentSnapshot.Protocols = make(map[string]ProtocolStatus)
+	currentSnapshot.StorageCategories = GlobalStorageScanner.GetSnapshot()
 	snapshotMu.Unlock()
 
 	go func() {
@@ -405,6 +406,7 @@ func startMetricsCollector(storagePath string) {
 			currentSnapshot.Network.TotalDownload = formatTraffic(curRx)
 			currentSnapshot.Network.TotalUpload = formatTraffic(curTx)
 			currentSnapshot.Time = now.Format("2006-01-02 15:04:05")
+			currentSnapshot.StorageCategories = GlobalStorageScanner.GetSnapshot()
 			snapshotMu.Unlock()
 
 			// 3. 内存与运行时间 (每 2 秒)
@@ -650,7 +652,6 @@ func startMetricsCollector(storagePath string) {
 
 // =========================================================
 // ⚡ 原生安全 FTP 服务端 (0.0.0.0:2121)
-// 完整支持 Passive (PASV / EPSV) 与 Active (PORT / EPRT) 双模式
 // =========================================================
 
 type FTPSession struct {
@@ -659,7 +660,6 @@ type FTPSession struct {
 	rootDir      string
 	cwd          string
 	dataListener net.Listener
-	activeAddr   string // "IP:Port" 用于主动模式 (PORT / EPRT)
 	binaryMode   bool
 	renameFrom   string
 	mu           sync.Mutex
@@ -742,16 +742,7 @@ func (s *FTPSession) safeResolvePath(userPath string, forCreation bool) (string,
 }
 
 func (s *FTPSession) handle() {
-	defer func() {
-		s.mu.Lock()
-		if s.dataListener != nil {
-			s.dataListener.Close()
-			s.dataListener = nil
-		}
-		s.mu.Unlock()
-		s.conn.Close()
-	}()
-
+	defer s.conn.Close()
 	s.send("220 PocketNAS Pro Secure FTP Server Ready.")
 
 	for {
@@ -779,7 +770,7 @@ func (s *FTPSession) handle() {
 		case "SYST":
 			s.send("215 UNIX Type: L8")
 		case "FEAT":
-			s.send("211-Features:\r\n UTF8\r\n SIZE\r\n PASV\r\n EPSV\r\n EPRT\r\n REST STREAM\r\n211 End")
+			s.send("211-Features:\n UTF8\n SIZE\n PASV\n EPSV\n REST STREAM\n211 End")
 		case "PWD", "XPWD":
 			s.send(fmt.Sprintf("257 \"%s\" is current directory.", s.cwd))
 		case "TYPE":
@@ -811,10 +802,6 @@ func (s *FTPSession) handle() {
 			s.handlePASV()
 		case "EPSV":
 			s.handleEPSV()
-		case "PORT":
-			s.handlePORT(arg)
-		case "EPRT":
-			s.handleEPRT(arg)
 		case "LIST", "NLST":
 			s.handleLIST(arg)
 		case "RETR":
@@ -925,25 +912,12 @@ func (s *FTPSession) handlePASV() {
 
 	if s.dataListener != nil {
 		s.dataListener.Close()
-		s.dataListener = nil
 	}
-	s.activeAddr = ""
 
-	// 优先在 20000-20050 固定端口池中监听，提升 VPN/防火墙穿透率
-	var l net.Listener
-	var err error
-	for p := 20000; p <= 20050; p++ {
-		l, err = net.Listen("tcp", fmt.Sprintf("0.0.0.0:%d", p))
-		if err == nil {
-			break
-		}
-	}
-	if l == nil {
-		l, err = net.Listen("tcp", "0.0.0.0:0")
-		if err != nil {
-			s.send("425 Can't open passive connection.")
-			return
-		}
+	l, err := net.Listen("tcp", ":0")
+	if err != nil {
+		s.send("425 Can't open passive connection.")
+		return
 	}
 	s.dataListener = l
 
@@ -953,14 +927,10 @@ func (s *FTPSession) handlePASV() {
 
 	host, _, _ := net.SplitHostPort(s.conn.LocalAddr().String())
 	ip := net.ParseIP(host)
-	if ip == nil || ip.IsLoopback() || ip.To4() == nil || host == "0.0.0.0" {
-		lanIP, _ := getPhysicalLANIP()
-		ip = lanIP
+	if ip == nil || ip.IsLoopback() || ip.To4() == nil {
+		ip = net.ParseIP("127.0.0.1")
 	}
 	ip4 := ip.To4()
-	if ip4 == nil {
-		ip4 = net.ParseIP("127.0.0.1").To4()
-	}
 
 	s.send(fmt.Sprintf("227 Entering Passive Mode (%d,%d,%d,%d,%d,%d)", ip4[0], ip4[1], ip4[2], ip4[3], p1, p2))
 }
@@ -971,24 +941,12 @@ func (s *FTPSession) handleEPSV() {
 
 	if s.dataListener != nil {
 		s.dataListener.Close()
-		s.dataListener = nil
 	}
-	s.activeAddr = ""
 
-	var l net.Listener
-	var err error
-	for p := 20000; p <= 20050; p++ {
-		l, err = net.Listen("tcp", fmt.Sprintf("0.0.0.0:%d", p))
-		if err == nil {
-			break
-		}
-	}
-	if l == nil {
-		l, err = net.Listen("tcp", "0.0.0.0:0")
-		if err != nil {
-			s.send("425 Can't open passive connection.")
-			return
-		}
+	l, err := net.Listen("tcp", ":0")
+	if err != nil {
+		s.send("425 Can't open passive connection.")
+		return
 	}
 	s.dataListener = l
 	port := l.Addr().(*net.TCPAddr).Port
@@ -996,87 +954,23 @@ func (s *FTPSession) handleEPSV() {
 	s.send(fmt.Sprintf("229 Entering Extended Passive Mode (|||%d|)", port))
 }
 
-// 主动模式 PORT 指令支持 (PORT h1,h2,h3,h4,p1,p2)
-func (s *FTPSession) handlePORT(arg string) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	if s.dataListener != nil {
-		s.dataListener.Close()
-		s.dataListener = nil
-	}
-
-	parts := strings.Split(arg, ",")
-	if len(parts) != 6 {
-		s.send("501 Syntax error in parameters.")
-		return
-	}
-
-	p1, err1 := strconv.Atoi(parts[4])
-	p2, err2 := strconv.Atoi(parts[5])
-	if err1 != nil || err2 != nil {
-		s.send("501 Invalid port parameters.")
-		return
-	}
-
-	port := p1*256 + p2
-	ipStr := fmt.Sprintf("%s.%s.%s.%s", parts[0], parts[1], parts[2], parts[3])
-	s.activeAddr = net.JoinHostPort(ipStr, strconv.Itoa(port))
-	s.send("200 PORT command successful.")
-}
-
-// 主动模式 EPRT 指令支持 (EPRT |<proto>|<ip>|<port>|)
-func (s *FTPSession) handleEPRT(arg string) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	if s.dataListener != nil {
-		s.dataListener.Close()
-		s.dataListener = nil
-	}
-
-	parts := strings.Split(arg, "|")
-	if len(parts) < 5 {
-		s.send("501 Syntax error in parameters.")
-		return
-	}
-
-	ipStr := parts[2]
-	portStr := parts[3]
-	s.activeAddr = net.JoinHostPort(ipStr, portStr)
-	s.send("200 EPRT command successful.")
-}
-
 func (s *FTPSession) getDataConn() (net.Conn, error) {
 	s.mu.Lock()
 	l := s.dataListener
 	s.dataListener = nil
-	activeTarget := s.activeAddr
-	s.activeAddr = ""
 	s.mu.Unlock()
 
-	// 1. 被动连接模式 (PASV / EPSV)
-	if l != nil {
-		defer l.Close()
-		_ = l.(*net.TCPListener).SetDeadline(time.Now().Add(15 * time.Second))
-		conn, err := l.Accept()
-		if err != nil {
-			return nil, err
-		}
-		return conn, nil
+	if l == nil {
+		return nil, fmt.Errorf("no passive listener")
 	}
+	defer l.Close()
 
-	// 2. 主动连接模式 (PORT / EPRT - 服务器主动连接客户端)
-	if activeTarget != "" {
-		dialer := net.Dialer{Timeout: 10 * time.Second}
-		conn, err := dialer.Dial("tcp", activeTarget)
-		if err != nil {
-			return nil, fmt.Errorf("active data connection failed: %v", err)
-		}
-		return conn, nil
+	_ = l.(*net.TCPListener).SetDeadline(time.Now().Add(10 * time.Second))
+	conn, err := l.Accept()
+	if err != nil {
+		return nil, err
 	}
-
-	return nil, fmt.Errorf("no passive listener or active address configured")
+	return conn, nil
 }
 
 func (s *FTPSession) handleLIST(arg string) {
@@ -1289,20 +1183,23 @@ func main() {
 	// 1. 启动时仅执行一次全量硬件与芯片动态识别 (0 循环开销)
 	GlobalHardwareInfo = DetectHardwareInfo()
 
-	// 2. 写入 PID
+	// 2. 初始化智能存储分类统计扫描引擎
+	GlobalStorageScanner.Init(serverConfig.StoragePath)
+
+	// 3. 写入 PID
 	pidPath := filepath.Join(baseDir, "../data/pocket_nas.pid")
 	if dataDir, err := filepath.Abs(filepath.Dir(pidPath)); err == nil {
 		_ = os.MkdirAll(dataDir, 0755)
 		_ = os.WriteFile(pidPath, []byte(strconv.Itoa(os.Getpid())), 0644)
 	}
 
-	// 3. 启动进程内零磁盘写入监控采集引擎
+	// 4. 启动进程内零磁盘写入监控采集引擎
 	startMetricsCollector(serverConfig.StoragePath)
 
-	// 4. 启动单一原生安全 FTP 服务端 (2121 端口)
+	// 5. 启动单一原生安全 FTP 服务端 (2121 端口)
 	startFTPServer(serverConfig.FtpPort, serverConfig.StoragePath)
 
-	// 5. 注册测速专属路由
+	// 6. 注册测速专属路由
 	registerSpeedtestHandlers()
 
 	webDirCandidates := []string{
@@ -1320,7 +1217,7 @@ func main() {
 		}
 	}
 
-	// 6. 静态硬件详情 API 接口 (/api/hardware)
+	// 7. 静态硬件详情 API 接口 (/api/hardware)
 	http.HandleFunc("/api/hardware", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.Header().Set("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0")
@@ -1329,7 +1226,28 @@ func main() {
 		_, _ = w.Write(data)
 	})
 
-	// 7. 内存状态 API 接口 (/api/status)
+	// 8. 存储分类详情 API 接口 (/api/storage/categories)
+	http.HandleFunc("/api/storage/categories", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		w.Header().Set("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0")
+		w.WriteHeader(http.StatusOK)
+		data, _ := json.Marshal(GlobalStorageScanner.GetSnapshot())
+		_, _ = w.Write(data)
+	})
+
+	// 9. 存储重新扫描触发 API (/api/storage/rescan)
+	http.HandleFunc("/api/storage/rescan", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		triggered := GlobalStorageScanner.TriggerScanAsync()
+		w.WriteHeader(http.StatusOK)
+		if triggered {
+			_, _ = io.WriteString(w, `{"status":"ok","message":"已触发后台存储扫描"}`)
+		} else {
+			_, _ = io.WriteString(w, `{"status":"busy","message":"扫描任务已在运行中"}`)
+		}
+	})
+
+	// 10. 内存状态 API 接口 (/api/status)
 	http.HandleFunc("/api/status", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.Header().Set("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0")
@@ -1348,7 +1266,7 @@ func main() {
 		_, _ = w.Write(data)
 	})
 
-	// 8. 静态文件托管
+	// 11. 静态文件托管
 	fs := http.FileServer(http.Dir(webDir))
 	http.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
@@ -1363,7 +1281,7 @@ func main() {
 		IdleTimeout:       60 * time.Second,
 	}
 
-	fmt.Printf("[PocketNAS Pro v3.2.2] Web 控制台已启动: http://0.0.0.0%s\n", server.Addr)
+	fmt.Printf("[PocketNAS Pro v3.3.0] Web 控制台已启动: http://0.0.0.0%s\n", server.Addr)
 	if err := server.ListenAndServe(); err != nil {
 		log.Printf("[PocketNAS Pro 警告] Web 端口 %d 监听失败: %v (将在 3 秒后重试)\n", serverConfig.Port, err)
 		time.Sleep(3 * time.Second)

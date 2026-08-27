@@ -342,37 +342,140 @@
 
       </div>
 
-      <!-- ================= TAB 2: 存储矩阵 ================= -->
+            <!-- ================= TAB 2: 存储矩阵与文件深度分析 ================= -->
       <div id="tab-storage" class="tab-pane">
-        <div class="glass-panel">
+        
+        <!-- 小米系统风格：多维存储空间分类分析 -->
+        <div class="glass-panel storage-analysis-panel">
           <div class="panel-head">
             <div class="panel-title">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect><rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect></svg>
-              <span>存储矩阵与分区挂载结构</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--accent-cyan)" stroke-width="2"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"></path><path d="M22 12A10 10 0 0 0 12 2v10z"></path></svg>
+              <span>存储空间深度分析 (内部存储 /data/media/0)</span>
             </div>
-            <span class="status-tag ok">闪存健康在线</span>
+            <div style="display:flex; align-items:center; gap:6px;">
+              <span class="status-tag ok" id="storage-scan-status-tag">● 数据已就绪</span>
+              <button class="btn-mini-copy" id="btn-trigger-rescan" onclick="triggerStorageRescan()">🔄 重新统计</button>
+            </div>
           </div>
 
-          <div style="display:flex; flex-direction:column; gap:6px; margin-top:6px;">
-            <div class="device-url-box">
-              <div>
-                <span style="font-size:10.5px; color:var(--text-muted);">用户主存储挂载点 (FTP / WebDAV / AList 共享根目录)</span>
-                <div class="code">/data/media/0</div>
-              </div>
-              <button class="btn-device-copy" onclick="copyText('/data/media/0', '挂载点路径')">📋 复制路径</button>
-            </div>
+          <!-- 顶部总容量文字 -->
+          <div class="storage-hero-summary">
+            <div class="hero-title">存储空间</div>
+            <div class="hero-sub" id="storage-hero-desc">已使用 --，剩余 --，共 --</div>
+          </div>
 
-            <div class="param-item"><span class="k">闪存总容量</span><span class="v" id="storage-total-detail">--</span></div>
-            <div class="param-item"><span class="k">已使用空间</span><span class="v" id="storage-used-detail">--</span></div>
-            <div class="param-item"><span class="k">可用剩余空间</span><span class="v" id="storage-free-detail">--</span></div>
-            
-            <div style="margin-top:6px; padding:8px 10px; background:var(--stat-box-bg); border-radius:6px; border:1px solid var(--glass-border);">
-              <p style="font-size:11.5px; color:var(--text-sub); line-height:1.5;">
-                💡 <strong>文件存储说明：</strong> 手机内部存储通过 24/7 原生 FTP (端口: 2121) 与 WebDAV (端口: 5244/dav) 开放免密挂载，所有连接均受严格 Root 路径安全约束（杜绝路径穿越与软链接逃逸）。
-              </p>
+          <!-- 多段色彩融合比例柱条 -->
+          <div class="multi-segment-bar-wrapper">
+            <div class="multi-segment-bar" id="storage-multi-bar">
+              <div class="seg-item seg-app" style="width: 0%;" title="应用和数据"></div>
+              <div class="seg-item seg-img" style="width: 0%;" title="图片"></div>
+              <div class="seg-item seg-aud" style="width: 0%;" title="音频"></div>
+              <div class="seg-item seg-vid" style="width: 0%;" title="视频"></div>
+              <div class="seg-item seg-apk" style="width: 0%;" title="安装包"></div>
+              <div class="seg-item seg-doc" style="width: 0%;" title="文档"></div>
+              <div class="seg-item seg-arch" style="width: 0%;" title="压缩包"></div>
+              <div class="seg-item seg-oth" style="width: 0%;" title="其他文件"></div>
             </div>
+          </div>
+
+          <!-- 分类列表 (仿 HyperOS / 小米安全中心存储界面) -->
+          <div class="storage-categories-grid" id="storage-categories-list">
+            <!-- 动态生成 8 大分类条目 -->
+            <div class="cat-card">
+              <div class="cat-left">
+                <span class="cat-dot" style="background:#f59e0b;"></span>
+                <span class="cat-name">应用和数据</span>
+              </div>
+              <div class="cat-right">
+                <span class="cat-size" id="cat-size-app">--</span>
+                <span class="cat-arrow">›</span>
+              </div>
+            </div>
+            <div class="cat-card">
+              <div class="cat-left">
+                <span class="cat-dot" style="background:#f97316;"></span>
+                <span class="cat-name">图片</span>
+              </div>
+              <div class="cat-right">
+                <span class="cat-size" id="cat-size-image">--</span>
+                <span class="cat-arrow">›</span>
+              </div>
+            </div>
+            <div class="cat-card">
+              <div class="cat-left">
+                <span class="cat-dot" style="background:#ef4444;"></span>
+                <span class="cat-name">音频</span>
+              </div>
+              <div class="cat-right">
+                <span class="cat-size" id="cat-size-audio">--</span>
+                <span class="cat-arrow">›</span>
+              </div>
+            </div>
+            <div class="cat-card">
+              <div class="cat-left">
+                <span class="cat-dot" style="background:#a855f7;"></span>
+                <span class="cat-name">视频</span>
+              </div>
+              <div class="cat-right">
+                <span class="cat-size" id="cat-size-video">--</span>
+                <span class="cat-arrow">›</span>
+              </div>
+            </div>
+            <div class="cat-card">
+              <div class="cat-left">
+                <span class="cat-dot" style="background:#3b82f6;"></span>
+                <span class="cat-name">安装包</span>
+              </div>
+              <div class="cat-right">
+                <span class="cat-size" id="cat-size-apk">--</span>
+                <span class="cat-arrow">›</span>
+              </div>
+            </div>
+            <div class="cat-card">
+              <div class="cat-left">
+                <span class="cat-dot" style="background:#10b981;"></span>
+                <span class="cat-name">文档</span>
+              </div>
+              <div class="cat-right">
+                <span class="cat-size" id="cat-size-doc">--</span>
+                <span class="cat-arrow">›</span>
+              </div>
+            </div>
+            <div class="cat-card">
+              <div class="cat-left">
+                <span class="cat-dot" style="background:#06b6d4;"></span>
+                <span class="cat-name">压缩包</span>
+              </div>
+              <div class="cat-right">
+                <span class="cat-size" id="cat-size-archive">--</span>
+                <span class="cat-arrow">›</span>
+              </div>
+            </div>
+            <div class="cat-card">
+              <div class="cat-left">
+                <span class="cat-dot" style="background:#64748b;"></span>
+                <span class="cat-name">系统数据 / 其他</span>
+              </div>
+              <div class="cat-right">
+                <span class="cat-size" id="cat-size-other">--</span>
+                <span class="cat-arrow">›</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 底部扫描时间与挂载说明 -->
+          <div class="storage-footer-meta">
+            <span style="font-size:10.5px; color:var(--text-muted);" id="storage-last-scan-time">上次扫描: 尚未完成</span>
+            <span style="font-size:10.5px; color:var(--accent-cyan);">共享根路径: /data/media/0</span>
+          </div>
+
+          <div style="margin-top:4px; padding:8px 10px; background:var(--stat-box-bg); border-radius:6px; border:1px solid var(--glass-border);">
+            <p style="font-size:11px; color:var(--text-sub); line-height:1.5;">
+              💡 <strong>极低功耗分类说明：</strong> 分类统计采用纯 Go 静态扫描引擎，启动后常驻内存，每 30 分钟后台静默刷新，不触发高频磁盘唤醒（待机功耗保持约 0.3W）。支持点击右上角「🔄 重新统计」按需刷新最新增删文件。
+            </p>
           </div>
         </div>
+
       </div>
 
       <!-- ================= TAB 3: 局域网设备互联 ================= -->

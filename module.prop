@@ -1,6 +1,6 @@
 id=pocket_nas
 name=口袋 NAS · PocketNAS Pro
-version=v3.2.3
-versionCode=323
+version=v3.3.0
+versionCode=330
 author=ruiRun0916
-description=Android 通用硬件识别与低功耗 NAS 平台：PC大屏高空间利用率响应式布局，真实电池健康度/健康容量(Wh为主)/循环次数，平滑续航估算与插电自适应，24/7 原生安全 FTP (2121) 与 WebDAV (5244)。
+description=Android 通用硬件识别与低功耗 NAS 平台：集成小米风格多维存储深度分类（图片/音频/视频/安装包/文档/压缩包全格式），PC大屏高空间利用率响应式布局，真实电池健康度/健康容量(Wh为主)/循环次数，24/7 原生安全 FTP (2121) 与 WebDAV (5244)。

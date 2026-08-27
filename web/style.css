@@ -1076,3 +1076,133 @@ body {
     grid-template-columns: 1fr;
   }
 }
+
+/* =========================================================
+   PocketNAS Pro v3.3.0 - Xiaomi Style Storage Categorization UI
+   ========================================================= */
+
+.storage-analysis-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.storage-hero-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 2px;
+}
+
+.storage-hero-summary .hero-title {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--text-main);
+  letter-spacing: -0.2px;
+}
+
+.storage-hero-summary .hero-sub {
+  font-size: 11.5px;
+  color: var(--text-muted);
+}
+
+/* 多段色彩融合比例柱条 (仿小米圆柱形胶囊) */
+.multi-segment-bar-wrapper {
+  width: 100%;
+  padding: 2px 0;
+}
+
+.multi-segment-bar {
+  width: 100%;
+  height: 14px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 7px;
+  display: flex;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3) inset;
+  border: 1px solid var(--glass-border);
+}
+
+.multi-segment-bar .seg-item {
+  height: 100%;
+  transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.seg-app { background: #f59e0b; }
+.seg-img { background: #f97316; }
+.seg-aud { background: #ef4444; }
+.seg-vid { background: #a855f7; }
+.seg-apk { background: #3b82f6; }
+.seg-doc { background: #10b981; }
+.seg-arch { background: #06b6d4; }
+.seg-oth { background: #64748b; }
+
+/* 分类条目卡片网格 (仿 HyperOS / MIUI 安全中心) */
+.storage-categories-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 6px;
+}
+
+.cat-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--stat-box-bg);
+  border: 1px solid var(--stat-box-border);
+  border-radius: 8px;
+  padding: 8px 12px;
+  transition: all 0.18s ease;
+}
+
+.cat-card:hover {
+  background: var(--glass-highlight);
+  border-color: var(--glass-border-hover);
+  transform: translateY(-1px);
+}
+
+.cat-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cat-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  box-shadow: 0 0 6px rgba(0, 0, 0, 0.2);
+}
+
+.cat-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.cat-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cat-size {
+  font-size: 13px;
+  font-weight: 700;
+  font-family: ui-monospace, SFMono-Regular, monospace;
+  color: var(--text-main);
+}
+
+.cat-arrow {
+  font-size: 14px;
+  color: var(--text-muted);
+  font-weight: bold;
+}
+
+.storage-footer-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 2px;
+}

@@ -1,4 +1,4 @@
-# 口袋 NAS · PocketNAS Pro v3.2.2
+# 口袋 NAS · PocketNAS Pro 
 
 <p align="center">
   <img src="https://img.shields.io/badge/Release-v3.2.2-blue?style=flat-square" alt="Version" />

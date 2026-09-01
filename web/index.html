@@ -1,88 +1,108 @@
 <!DOCTYPE html>
-<html lang="zh-CN" data-theme="dark">
+<html lang="zh-CN" data-theme="dark" data-font-scale="standard" data-motion="light">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <title>PocketNAS Pro v3.3.2 · 私人 NAS 控制台</title>
-  <link rel="stylesheet" href="style.css?v=20260827_330">
+  <title>PocketNAS Pro v3.3.6 · 工业高密度 NAS 控制台</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css?v=20260901_336">
 </head>
 <body>
 
-  <div class="app-wrapper">
+  <div class="app-shell">
     
-    <!-- ================= 顶置全景导航栏 ================= -->
-    <header class="top-header">
+    <!-- ================= 顶置 HUD 工业风格控制栏 (移动端 2x4 双行全宽免滑动导航) ================= -->
+    <header class="hud-header">
       
-      <div class="brand-section">
-        <div class="brand-badge">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+      <!-- 第一排：品牌与控制栏 -->
+      <div class="header-top-row">
+        <div class="brand-section">
+          <div class="brand-glyph" title="PocketNAS Pro Core">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="4" width="18" height="6" rx="2"></rect>
+              <rect x="3" y="14" width="18" height="6" rx="2"></rect>
+              <line x1="7" y1="7" x2="7.01" y2="7"></line>
+              <line x1="7" y1="17" x2="7.01" y2="17"></line>
+              <circle cx="17" cy="7" r="1" fill="currentColor"></circle>
+              <circle cx="17" cy="17" r="1" fill="currentColor"></circle>
+            </svg>
+          </div>
+          <div class="brand-meta">
+            <div class="brand-title-line">
+              <span class="brand-title">PocketNAS</span>
+              <span class="status-tag green compact"><span class="dot ok"></span>在线</span>
+              <div class="mini-meta-chips" id="header-mini-chips">
+                <span class="chip-soc" id="chip-soc-val">ARM64</span>
+                <span class="chip-os" id="chip-os-val">A14</span>
+                <span class="chip-root" id="chip-root-val">KSU</span>
+              </div>
+            </div>
+          </div>
         </div>
-        <div class="brand-text">
-          <h1 id="dev-name">
-            <span id="header-brand-model">PocketNAS Pro</span>
-            <span class="glow-pill green">● 在线</span>
-          </h1>
-          <p id="dev-sub">加载中 · Android · KernelSU Root</p>
+
+        <!-- 帮助、设置、健康、主题、刷新等常用控制按钮 -->
+        <div class="hud-actions">
+          <button class="btn-hud" onclick="openHelpModal()" title="连接教程与排错指南">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+            <span>帮助</span>
+          </button>
+          <button class="btn-hud" onclick="openSettingsModal()" title="偏好与界面控制中心">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+            <span>设置</span>
+          </button>
+          <div class="status-tag cyan" id="health-badge">
+            <span>健康 100%</span>
+          </div>
+          <button class="btn-hud-icon" id="theme-toggle-btn" onclick="toggleThemeNext()" title="切换明暗色彩主题">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" id="theme-icon-svg"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+          </button>
+          <button class="btn-hud-icon" onclick="handleQuickRun()" title="立即同步遥测数据">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+          </button>
         </div>
       </div>
 
-            <!-- 顶置功能 Tabs (全景看板 -> 存储空间 -> 设备连接 -> NAS服务 -> AList(5244) -> 文件闪传(2333) -> 传输测速) -->
-      <nav class="top-nav">
-        <button class="nav-tab-btn active" data-tab="tab-overview">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
-          <span>全景看板</span>
-        </button>
-        <button class="nav-tab-btn" data-tab="tab-storage">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>
-          <span>存储空间</span>
-        </button>
-        <button class="nav-tab-btn" data-tab="tab-network">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
-          <span>设备连接</span>
-        </button>
-        <button class="nav-tab-btn" data-tab="tab-services">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect><rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect><line x1="6" y1="6" x2="6.01" y2="6"></line><line x1="6" y1="18" x2="6.01" y2="18"></line></svg>
-          <span>NAS 服务</span>
-        </button>
-        <button class="nav-tab-btn" data-tab="tab-alist">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
-          <span>文件系统(AList)</span>
-        </button>
-        <button class="nav-tab-btn" data-tab="tab-fsend">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--accent-orange)" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
-          <span>文件闪传(:2333)</span>
-        </button>
-        <button class="nav-tab-btn" data-tab="tab-speedtest">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--accent-pink)" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
-          <span>传输测速</span>
-        </button>
-      </nav>
-
-      <!-- 顶部快捷操作与状态区 -->
-      <div class="header-actions">
-        <button class="btn-help-pill" onclick="openHelpModal()" title="查看连接教程与帮助文档">
-          <span>❓ 帮助</span>
-        </button>
-
-        <div class="glow-pill cyan" id="health-badge">
-          <span>🛡️ 100%</span>
-        </div>
-        <div class="glow-pill" id="uptime-badge">
-          <span>⏱️ --</span>
-        </div>
-        
-        <div class="theme-switch-mini">
-          <button class="theme-btn-mini active" id="theme-btn-auto" onclick="setThemeMode('auto')" title="跟随系统">💻</button>
-          <button class="theme-btn-mini" id="theme-btn-light" onclick="setThemeMode('light')" title="浅色模式">☀️</button>
-          <button class="theme-btn-mini" id="theme-btn-dark" onclick="setThemeMode('dark')" title="深色模式">🌙</button>
-        </div>
-
-        <button class="btn-header-action" onclick="handleQuickRun()">
-          <span>⚡ 刷新</span>
-        </button>
+      <!-- 第二排：2x4 双行紧凑全宽导航栏 (在操作栏正下方，免横向滑动，单手一按即切) -->
+      <div class="header-nav-row">
+        <nav class="hud-nav-rail nav-grid-2x4" id="main-hud-nav">
+          <button class="hud-nav-btn active" data-tab="tab-overview" id="nav-item-overview">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1.5"></rect><rect x="14" y="3" width="7" height="7" rx="1.5"></rect><rect x="14" y="14" width="7" height="7" rx="1.5"></rect><rect x="3" y="14" width="7" height="7" rx="1.5"></rect></svg>
+            <span>全景看板</span>
+          </button>
+          <button class="hud-nav-btn" data-tab="tab-storage" id="nav-item-storage">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>
+            <span>存储空间</span>
+          </button>
+          <button class="hud-nav-btn" data-tab="tab-network" id="nav-item-network">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="6" height="6" rx="1"></rect><rect x="16" y="2" width="6" height="6" rx="1"></rect><rect x="9" y="16" width="6" height="6" rx="1"></rect><path d="M5 8v3a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8"></path><line x1="12" y1="13" x2="12" y2="16"></line></svg>
+            <span>设备连接</span>
+          </button>
+          <button class="hud-nav-btn" data-tab="tab-services" id="nav-item-services">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="7" rx="2"></rect><rect x="2" y="14" width="20" height="7" rx="2"></rect><line x1="6" y1="6.5" x2="6.01" y2="6.5"></line><line x1="6" y1="17.5" x2="6.01" y2="17.5"></line></svg>
+            <span>NAS 服务</span>
+          </button>
+          <button class="hud-nav-btn" data-tab="tab-alist" id="nav-item-alist">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+            <span>文件管理</span>
+          </button>
+          <button class="hud-nav-btn" data-tab="tab-fsend" id="nav-item-fsend">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path><polyline points="16 6 12 2 8 6"></polyline><line x1="12" y1="2" x2="12" y2="15"></line></svg>
+            <span>文件上传</span>
+          </button>
+          <button class="hud-nav-btn" data-tab="tab-speedtest" id="nav-item-speedtest">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"></path></svg>
+            <span>传输测速</span>
+          </button>
+          <button class="hud-nav-btn" data-tab="tab-tailscale" id="nav-item-tailscale">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"></path><path d="M2 12h20"></path></svg>
+            <span>Tailscale</span>
+          </button>
+        </nav>
       </div>
 
     </header>
@@ -90,140 +110,229 @@
     <!-- ================= 页面主体容器 ================= -->
     <main class="main-viewport">
 
-      <!-- ================= TAB 1: 首页全景控制台 ================= -->
-      <div id="tab-overview" class="tab-pane active">
+      <!-- ================= TAB 1: 全景看板 (Overview) ================= -->
+      <div id="tab-overview" class="tab-view active">
         
-        <!-- 第一行：4 列核心状态矩阵 -->
-        <section class="grid-4-dense layout-row-1">
+        <!-- 第一行：4 列高密度硬件与资源矩阵 -->
+        <section class="grid-4-telemetry layout-row-1">
           
-          <!-- 1. 存储空间卡片 -->
-          <div class="glass-panel card-storage">
-            <div class="panel-head">
-              <div class="panel-title">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--accent-cyan)" stroke-width="2"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect><rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect></svg>
+          <!-- 1. 存储空间 -->
+          <div class="cyber-card card-storage">
+            <div class="card-hud-head">
+              <div class="card-hud-title">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--accent-cyan)" stroke-width="2"><rect x="2" y="2" width="20" height="8" rx="2"></rect><rect x="2" y="14" width="20" height="8" rx="2"></rect></svg>
                 <span>存储空间</span>
               </div>
-              <span id="storage-pct-badge" class="badge-tag cyan">--% 已用</span>
+              <div style="display:flex; align-items:center; gap:4px;">
+                <span id="storage-pct-badge" class="status-tag cyan" style="font-size:0.75em; padding:1px 5px;">--% 已用</span>
+                <button class="btn-hud" style="padding:1px 5px; font-size:0.75em;" onclick="triggerStorageRescan()">重计</button>
+              </div>
             </div>
             <div class="card-body-compact">
-              <div class="stat-big-row">
-                <span class="num-highlight" id="storage-used">--</span>
-                <span class="num-sub" id="storage-total">/ --</span>
+              <div class="hero-metric-row">
+                <span class="num-hud" id="storage-used">--</span>
+                <span class="num-hud-sub" id="storage-total">/ --</span>
               </div>
-              <div class="storage-bar-track">
-                <div id="storage-bar-fill" class="storage-bar-fill" style="width: 0%;"></div>
-              </div>
-              <div class="card-sub-meta">
+              <div class="card-hud-footer">
                 <span>可用: <strong id="storage-free">--</strong></span>
-                <span class="path-tag">/data/media/0</span>
+                <span style="color:var(--accent-cyan); font-family:var(--font-mono); font-size:0.8em;">/data/media/0</span>
+              </div>
+
+              <!-- 小米风格多段胶囊比例柱条 -->
+              <div class="multi-seg-bar" id="overview-storage-bar" title="存储空间深度分类">
+                <div class="seg seg-app" style="width: 0%;" title="应用和数据"></div>
+                <div class="seg seg-img" style="width: 0%;" title="图片相册"></div>
+                <div class="seg seg-aud" style="width: 0%;" title="音乐音频"></div>
+                <div class="seg seg-vid" style="width: 0%;" title="视频媒体"></div>
+                <div class="seg seg-apk" style="width: 0%;" title="安装包 (APK)"></div>
+                <div class="seg seg-doc" style="width: 0%;" title="文档书籍"></div>
+                <div class="seg seg-arch" style="width: 0%;" title="压缩归档"></div>
+                <div class="seg seg-oth" style="width: 0%;" title="系统/其他"></div>
+              </div>
+
+              <!-- 8 类深度分类数据紧凑芯片网格 -->
+              <div class="dense-chip-grid">
+                <div class="dense-chip-item">
+                  <div class="chip-label"><span class="dot" style="background:#f59e0b;"></span><span>应用数据</span></div>
+                  <span class="chip-val" id="ov-cat-app">--</span>
+                </div>
+                <div class="dense-chip-item">
+                  <div class="chip-label"><span class="dot" style="background:#a855f7;"></span><span>视频媒体</span></div>
+                  <span class="chip-val" id="ov-cat-vid">--</span>
+                </div>
+                <div class="dense-chip-item">
+                  <div class="chip-label"><span class="dot" style="background:#f97316;"></span><span>图片相册</span></div>
+                  <span class="chip-val" id="ov-cat-img">--</span>
+                </div>
+                <div class="dense-chip-item">
+                  <div class="chip-label"><span class="dot" style="background:#10b981;"></span><span>文档书籍</span></div>
+                  <span class="chip-val" id="ov-cat-doc">--</span>
+                </div>
+                <div class="dense-chip-item">
+                  <div class="chip-label"><span class="dot" style="background:#ef4444;"></span><span>音乐音频</span></div>
+                  <span class="chip-val" id="ov-cat-aud">--</span>
+                </div>
+                <div class="dense-chip-item">
+                  <div class="chip-label"><span class="dot" style="background:#06b6d4;"></span><span>压缩归档</span></div>
+                  <span class="chip-val" id="ov-cat-arch">--</span>
+                </div>
+                <div class="dense-chip-item">
+                  <div class="chip-label"><span class="dot" style="background:#3b82f6;"></span><span>安装包</span></div>
+                  <span class="chip-val" id="ov-cat-apk">--</span>
+                </div>
+                <div class="dense-chip-item">
+                  <div class="chip-label"><span class="dot" style="background:#64748b;"></span><span>系统/其他</span></div>
+                  <span class="chip-val" id="ov-cat-oth">--</span>
+                </div>
+              </div>
+
+              <div class="hud-endurance-box">
+                <span style="font-size:0.78em; color:var(--text-dim);">Go 异步扫描 (待机约 0.3W)</span>
+                <strong class="val" style="font-size:0.82em; color:var(--accent-emerald);">● 数据已就绪</strong>
               </div>
             </div>
           </div>
 
-          <!-- 2. 运行内存卡片 -->
-          <div class="glass-panel card-ram">
-            <div class="panel-head">
-              <div class="panel-title">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--accent-green)" stroke-width="2"><path d="M6 19v-3M10 19v-3M14 19v-3M18 19v-3M6 5v3M10 5v3M14 5v3M18 5v3M2 8h20v8H2z"/></svg>
+          <!-- 2. 运行内存 -->
+          <div class="cyber-card card-ram">
+            <div class="card-hud-head">
+              <div class="card-hud-title">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--accent-emerald)" stroke-width="2"><path d="M6 19v-3M10 19v-3M14 19v-3M18 19v-3M6 5v3M10 5v3M14 5v3M18 5v3M2 8h20v8H2z"/></svg>
                 <span>运行内存</span>
               </div>
-              <span id="ram-pct-badge" class="badge-tag green">--% 已用</span>
+              <div style="display:flex; align-items:center; gap:4px;">
+                <span id="ram-pct-badge" class="status-tag green" style="font-size:0.75em; padding:1px 5px;">--% 已用</span>
+                <span class="status-tag" style="font-size:0.72em; padding:1px 4px;">LPDDR</span>
+              </div>
             </div>
             <div class="card-body-compact">
-              <div class="stat-big-row">
-                <span class="num-highlight" id="ram-used">--</span>
-                <span class="num-sub" id="ram-total">/ --</span>
+              <div class="hero-metric-row">
+                <span class="num-hud" id="ram-used">--</span>
+                <span class="num-hud-sub" id="ram-total">/ --</span>
               </div>
-              <div class="storage-bar-track">
-                <div id="ram-bar-fill" class="storage-bar-fill green-bar" style="width: 0%;"></div>
-              </div>
-              <div class="card-sub-meta">
+              <div class="card-hud-footer">
                 <span>ZRAM: <strong id="zram-used">--</strong></span>
-                <span>缓存: <strong id="cache-used">--</strong></span>
+                <span>页缓存: <strong id="cache-used">--</strong></span>
+              </div>
+
+              <!-- 内存构成比例条 -->
+              <div class="multi-seg-bar" title="物理内存与压缩置换构成">
+                <div class="seg seg-mem-active" id="seg-mem-used-bar" style="width: 30%;" title="已用内存"></div>
+                <div class="seg seg-mem-cached" id="seg-mem-cached-bar" style="width: 15%;" title="页缓存"></div>
+                <div class="seg seg-mem-zram" id="seg-mem-zram-bar" style="width: 10%;" title="ZRAM 压缩"></div>
+                <div class="seg seg-mem-free" id="seg-mem-free-bar" style="width: 45%;" title="空闲可用"></div>
+              </div>
+
+              <div class="bat-matrix-hud">
+                <div class="bm-cell">
+                  <div class="lbl">可用内存</div>
+                  <div class="val green" id="ram-free">--</div>
+                  <div class="sub">物理驻留</div>
+                </div>
+                <div class="bm-cell">
+                  <div class="lbl">页缓存</div>
+                  <div class="val" id="ram-cached-val">--</div>
+                  <div class="sub">Buffers</div>
+                </div>
+                <div class="bm-cell">
+                  <div class="lbl">ZRAM</div>
+                  <div class="val" style="color:var(--accent-amber);" id="ram-zram-pct">--</div>
+                  <div class="sub">压缩池</div>
+                </div>
+                <div class="bm-cell">
+                  <div class="lbl">调度保护</div>
+                  <div class="val" style="color:var(--accent-cyan);">LMKD</div>
+                  <div class="sub">低开销</div>
+                </div>
+              </div>
+
+              <div class="hud-endurance-box">
+                <span style="font-size:0.78em; color:var(--text-dim);">系统负载均衡</span>
+                <strong class="val" style="font-size:0.82em; color:var(--accent-cyan);" id="loadavg-text-ram">--</strong>
               </div>
             </div>
           </div>
 
           <!-- 3. CPU / SoC 处理器卡片 -->
-          <div class="glass-panel card-cpu">
-            <div class="panel-head">
-              <div class="panel-title">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--accent-orange)" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><line x1="9" y1="1" x2="9" y2="4"/><line x1="15" y1="1" x2="15" y2="4"/><line x1="9" y1="20" x2="9" y2="23"/><line x1="15" y1="20" x2="15" y2="23"/><line x1="20" y1="9" x2="23" y2="9"/><line x1="20" y1="14" x2="23" y2="14"/><line x1="1" y1="9" x2="4" y2="9"/><line x1="1" y1="14" x2="4" y2="14"/></svg>
+          <div class="cyber-card card-cpu">
+            <div class="card-hud-head">
+              <div class="card-hud-title">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--accent-amber)" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><line x1="9" y1="1" x2="9" y2="4"/><line x1="15" y1="1" x2="15" y2="4"/><line x1="9" y1="20" x2="9" y2="23"/><line x1="15" y1="20" x2="15" y2="23"/><line x1="20" y1="9" x2="23" y2="9"/><line x1="20" y1="14" x2="23" y2="14"/><line x1="1" y1="9" x2="4" y2="9"/><line x1="1" y1="14" x2="4" y2="14"/></svg>
                 <span>CPU / SoC</span>
               </div>
-              <span class="soc-name-badge" id="soc-full-name">正在检测...</span>
+              <span class="status-tag amber" id="soc-full-name" style="font-size:0.75em; padding:1px 5px;">正在检测...</span>
             </div>
             
             <div class="card-body-compact">
-              <div class="cpu-load-header">
-                <span class="lbl">CPU 负载</span>
-                <span class="num-highlight small" id="cpu-val-sub">--%</span>
+              <div style="display:flex; justify-content:space-between; align-items:baseline;">
+                <span style="font-size:0.85em; color:var(--text-muted);">CPU 总利用率</span>
+                <span class="num-hud small" id="cpu-val-sub">--%</span>
               </div>
-              <div class="storage-bar-track">
-                <div id="cpu-bar-fill" class="storage-bar-fill orange-bar" style="width: 0%;"></div>
+              <div class="cyber-progress-track">
+                <div id="cpu-bar-fill" class="cyber-progress-fill amber" style="width: 0%;"></div>
               </div>
 
-              <div class="cluster-rows-grid" id="cpu-clusters-container">
-                <div class="cluster-row-item">
+              <div class="cluster-hud-list" id="cpu-clusters-container">
+                <div class="cluster-row">
                   <span class="c-name">核心状态</span>
                   <span class="c-usage">检测中...</span>
                   <span class="c-cores">--</span>
                 </div>
               </div>
 
-              <div class="card-sub-meta">
+              <div class="card-hud-footer">
                 <span>负载: <strong id="loadavg-text">--</strong></span>
-                <span>SoC 温度: <strong id="cpu-temp-badge">--°C</strong></span>
+                <span>温度: <strong id="cpu-temp-badge">--°C</strong></span>
               </div>
             </div>
           </div>
 
-          <!-- 4. 电池与真实健康卡片 -->
-          <div class="glass-panel card-battery">
-            <div class="panel-head">
-              <div class="panel-title">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--accent-pink)" stroke-width="2"><rect x="1" y="6" width="18" height="12" rx="2"/><line x1="23" y1="10" x2="23" y2="14"/></svg>
-                <span>电池 / 功耗</span>
+          <!-- 4. 供电与真实健康 -->
+          <div class="cyber-card card-battery">
+            <div class="card-hud-head">
+              <div class="card-hud-title">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--accent-crimson)" stroke-width="2"><rect x="1" y="6" width="18" height="12" rx="2"/><line x1="23" y1="10" x2="23" y2="14"/></svg>
+                <span>供电与电池</span>
               </div>
-              <span class="badge-tag pink" id="bat-status-badge">电池供电</span>
+              <span class="status-tag" style="color:var(--accent-crimson); background:var(--accent-crimson-sub); font-size:0.75em;" id="bat-status-badge">电池供电</span>
             </div>
             
             <div class="card-body-compact">
-              <div class="stat-big-row">
-                <span class="num-highlight" id="bat-level-val">--%</span>
-                <span class="num-sub power" id="power-main-val">-- W</span>
+              <div class="hero-metric-row">
+                <span class="num-hud" id="bat-level-val">--%</span>
+                <span class="num-hud-sub watt" id="power-main-val">-- W</span>
               </div>
-              <div class="storage-bar-track">
-                <div id="bat-bar-fill" class="storage-bar-fill blue-bar" style="width: 0%;"></div>
-              </div>
-
-              <div class="bat-health-grid">
-                <div class="bh-item">
-                  <span class="k">电池健康</span>
-                  <span class="v green" id="bat-health-pct">--</span>
-                </div>
-                <div class="bh-item">
-                  <span class="k">健康容量</span>
-                  <span class="v" id="bat-health-wh">-- Wh</span>
-                  <span class="sub" id="bat-health-mah">≈ -- mAh</span>
-                </div>
-                <div class="bh-item">
-                  <span class="k">设计容量</span>
-                  <span class="v" id="bat-design-wh">-- Wh</span>
-                  <span class="sub" id="bat-design-mah">≈ -- mAh</span>
-                </div>
-                <div class="bh-item">
-                  <span class="k">循环次数</span>
-                  <span class="v" id="bat-cycle-count">--</span>
-                </div>
+              <div class="cyber-progress-track">
+                <div id="bat-bar-fill" class="cyber-progress-fill crimson" style="width: 0%;"></div>
               </div>
 
-              <div class="endurance-box" id="bat-endurance-box">
-                <span class="lbl">供电状态:</span>
+              <div class="bat-matrix-hud">
+                <div class="bm-cell">
+                  <div class="lbl">健康度</div>
+                  <div class="val green" id="bat-health-pct">--</div>
+                </div>
+                <div class="bm-cell">
+                  <div class="lbl">健康容量</div>
+                  <div class="val" id="bat-health-wh">-- Wh</div>
+                  <div class="sub" id="bat-health-mah">≈ -- mAh</div>
+                </div>
+                <div class="bm-cell">
+                  <div class="lbl">设计容量</div>
+                  <div class="val" id="bat-design-wh">-- Wh</div>
+                  <div class="sub" id="bat-design-mah">≈ -- mAh</div>
+                </div>
+                <div class="bm-cell">
+                  <div class="lbl">循环次数</div>
+                  <div class="val" id="bat-cycle-count">--</div>
+                </div>
+              </div>
+
+              <div class="hud-endurance-box" id="bat-endurance-box">
+                <span style="color:var(--text-dim);">供电状态:</span>
                 <strong class="val" id="bat-endurance-val">正在计算...</strong>
               </div>
 
-              <div class="card-sub-meta">
+              <div class="card-hud-footer">
                 <span>温度: <strong id="bat-temp-val">--°C</strong></span>
                 <span>电压·电流: <strong id="power-vi-val">--</strong></span>
               </div>
@@ -233,97 +342,165 @@
         </section>
 
         <!-- 第二行：2 列实时动态波形监控 -->
-        <section class="grid-2-dense layout-row-2">
+        <section class="grid-2-telemetry layout-row-2">
           
-          <div class="glass-panel">
-            <div class="panel-head">
-              <div class="panel-title">
+          <div class="cyber-card">
+            <div class="card-hud-head">
+              <div class="card-hud-title">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--accent-cyan)" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
                 <span>CPU 负载实时波动 (<span id="cpu-chart-pct">--%</span>)</span>
               </div>
-              <span style="font-size:10.5px; color:var(--text-muted);" id="cpu-arch-summary">核心负载</span>
+              <span style="font-size:0.8em; color:var(--text-dim);" id="cpu-arch-summary">核心负载</span>
             </div>
-            <div class="mini-canvas-box">
+            <div class="canvas-hud-box">
               <canvas id="cpu-chart"></canvas>
             </div>
           </div>
 
-          <div class="glass-panel">
-            <div class="panel-head">
-              <div class="panel-title">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--accent-green)" stroke-width="2"><path d="M5 12.55a11 11 0 0 1 14.08 0"></path><path d="M1.42 9a16 16 0 0 1 21.16 0"></path><path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path><line x1="12" y1="20" x2="12.01" y2="20"></line></svg>
-                <span>网络吞吐 (<span id="net-if">wlan0</span>: <span id="net-ip-tag" style="color:var(--accent-green);">10.x.x.x</span>)</span>
+          <div class="cyber-card">
+            <div class="card-hud-head">
+              <div class="card-hud-title">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--accent-emerald)" stroke-width="2"><path d="M5 12.55a11 11 0 0 1 14.08 0"></path><path d="M1.42 9a16 16 0 0 1 21.16 0"></path><path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path><line x1="12" y1="20" x2="12.01" y2="20"></line></svg>
+                <span>网络吞吐 (<span id="net-if">wlan0</span>: <span id="net-ip-tag" style="color:var(--accent-emerald);">10.x.x.x</span>)</span>
               </div>
-              <div style="display:flex; gap:8px;">
+              <div style="display:flex; gap:8px; font-family:var(--font-mono); font-size:0.85em;">
                 <span style="font-weight:700; color:var(--accent-cyan);" id="net-down">↓ 0 B/s</span>
-                <span style="font-weight:700; color:var(--accent-green);" id="net-up">↑ 0 B/s</span>
+                <span style="font-weight:700; color:var(--accent-emerald);" id="net-up">↑ 0 B/s</span>
               </div>
             </div>
-            <div class="mini-canvas-box">
+            <div class="canvas-hud-box">
               <canvas id="net-chart"></canvas>
             </div>
           </div>
 
         </section>
 
-        <!-- 第三行：核心服务总览 + 系统规格与快捷操作 -->
-        <section class="grid-2-dense layout-row-3">
+        <!-- 第三行：核心服务总览 + 快捷中枢 (新增「设备连接」快捷直跳) -->
+        <section class="grid-2-telemetry layout-row-3">
           
-          <div class="glass-panel">
-            <div class="panel-head">
-              <div class="panel-title">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect><rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect></svg>
-                <span>NAS 服务状态</span>
+          <div class="cyber-card">
+            <div class="card-hud-head">
+              <div class="card-hud-title">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="7" rx="2"></rect><rect x="2" y="14" width="20" height="7" rx="2"></rect><line x1="6" y1="6.5" x2="6.01" y2="6.5"></line><line x1="6" y1="17.5" x2="6.01" y2="17.5"></line></svg>
+                <span>NAS 服务中心</span>
               </div>
-              <button class="btn-mini-copy" onclick="switchTab('tab-services')">服务中心 ➔</button>
+              <button class="btn-hud" onclick="switchTab('tab-services')">服务管理 ➔</button>
             </div>
             <div id="overview-services-grid" style="display:grid; grid-template-columns: 1fr 1fr; gap:5px;">
-              <!-- 动态填充服务简明卡片 -->
+              <!-- 由 JS 动态填充 -->
             </div>
           </div>
 
-          <div class="glass-panel">
-            <div class="panel-head">
-              <div class="panel-title">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+          <div class="cyber-card">
+            <div class="card-hud-head">
+              <div class="card-hud-title">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="3"></rect><line x1="7" y1="2" x2="7" y2="22"></line><line x1="17" y1="2" x2="17" y2="22"></line><line x1="2" y1="12" x2="22" y2="12"></line></svg>
                 <span>系统规格与快捷操作</span>
               </div>
-              <span style="font-size:10.5px; color:var(--text-muted);" id="last-update">--</span>
+              <span style="font-size:0.8em; color:var(--text-dim);" id="last-update">--</span>
             </div>
             
-            <div style="display:grid; grid-template-columns: 1.2fr 1fr; gap:6px;">
-              <div class="matrix-grid" style="grid-template-columns: 1fr 1fr;">
-                <div class="matrix-cell">
-                  <span class="lbl">累计下行</span>
-                  <span class="num" id="net-total-down" style="font-size:11px; color:var(--accent-cyan);">--</span>
+            <div style="display:grid; grid-template-columns: 1.1fr 1fr; gap:6px;">
+              <div class="dense-chip-grid" style="grid-template-columns: 1fr 1fr;">
+                <div class="dense-chip-item">
+                  <span style="color:var(--text-dim);">累计下行</span>
+                  <span class="chip-val" id="net-total-down" style="color:var(--accent-cyan);">--</span>
                 </div>
-                <div class="matrix-cell">
-                  <span class="lbl">累计上行</span>
-                  <span class="num" id="net-total-up" style="font-size:11px; color:var(--accent-green);">--</span>
+                <div class="dense-chip-item">
+                  <span style="color:var(--text-dim);">累计上行</span>
+                  <span class="chip-val" id="net-total-up" style="color:var(--accent-emerald);">--</span>
                 </div>
-                <div class="matrix-cell">
-                  <span class="lbl">内核版本</span>
-                  <span class="num" id="kernel-tag" style="font-size:10px;">Linux</span>
+                <div class="dense-chip-item">
+                  <span style="color:var(--text-dim);">内核版本</span>
+                  <span class="chip-val" id="kernel-tag" style="font-size:0.78em;">Linux</span>
                 </div>
-                <div class="matrix-cell">
-                  <span class="lbl">SELinux</span>
-                  <span class="num" id="selinux-tag" style="font-size:10px; color:var(--accent-green);">Enforcing</span>
+                <div class="dense-chip-item">
+                  <span style="color:var(--text-dim);">SELinux</span>
+                  <span class="chip-val" id="selinux-tag" style="color:var(--accent-emerald);">Enforcing</span>
                 </div>
               </div>
 
-              <div class="action-tiles">
-                <div class="action-tile-btn" onclick="fetchStatus(true)">
-                  <span class="icon">🔄</span><span>刷新</span>
+              <!-- 快捷操作磁贴网格 (包含「设备连接」直达) -->
+              <div class="quick-hud-grid">
+                
+                <div class="quick-action-btn" onclick="switchTab('tab-network')">
+                  <div class="q-top-row">
+                    <div class="q-icon emerald">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="6" height="6" rx="1"></rect><rect x="16" y="2" width="6" height="6" rx="1"></rect><rect x="9" y="16" width="6" height="6" rx="1"></rect><path d="M5 8v3a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8"></path><line x1="12" y1="13" x2="12" y2="16"></line></svg>
+                    </div>
+                    <span class="q-badge" style="color:var(--accent-emerald);">CONN</span>
+                  </div>
+                  <div>
+                    <div class="q-title">设备连接</div>
+                    <div class="q-desc">WebDAV/FTP</div>
+                  </div>
                 </div>
-                <div class="action-tile-btn" onclick="switchTab('tab-speedtest')">
-                  <span class="icon" style="color:var(--accent-pink);">⚡</span><span>测速</span>
+
+                <div class="quick-action-btn" onclick="switchTab('tab-speedtest')">
+                  <div class="q-top-row">
+                    <div class="q-icon crimson">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+                    </div>
+                    <span class="q-badge" style="color:var(--accent-crimson);">PING</span>
+                  </div>
+                  <div>
+                    <div class="q-title">网络测速</div>
+                    <div class="q-desc">压测带宽延迟</div>
+                  </div>
                 </div>
-                <div class="action-tile-btn" onclick="switchTab('tab-network')">
-                  <span class="icon">🌐</span><span>连接</span>
+
+                <div class="quick-action-btn" onclick="switchTab('tab-tailscale')">
+                  <div class="q-top-row">
+                    <div class="q-icon green">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"></path><path d="M2 12h20"></path></svg>
+                    </div>
+                    <span class="q-badge" style="color:var(--accent-emerald);">TS</span>
+                  </div>
+                  <div>
+                    <div class="q-title">Tailscale</div>
+                    <div class="q-desc">远程穿透直达</div>
+                  </div>
                 </div>
-                <div class="action-tile-btn" onclick="copyText(window.location.origin, 'Dashboard 地址')">
-                  <span class="icon">📋</span><span>网址</span>
+
+                <div class="quick-action-btn" onclick="fetchStatus(true)">
+                  <div class="q-top-row">
+                    <div class="q-icon cyan">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+                    </div>
+                    <span class="q-badge">SYNC</span>
+                  </div>
+                  <div>
+                    <div class="q-title">数据刷新</div>
+                    <div class="q-desc">即时同步遥测</div>
+                  </div>
                 </div>
+
+                <div class="quick-action-btn" onclick="copyText(window.location.origin, '控制台地址')">
+                  <div class="q-top-row">
+                    <div class="q-icon amber">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                    </div>
+                    <span class="q-badge" style="color:var(--accent-amber);">URL</span>
+                  </div>
+                  <div>
+                    <div class="q-title">复制网址</div>
+                    <div class="q-desc">当前后台主页</div>
+                  </div>
+                </div>
+
+                <div class="quick-action-btn" onclick="switchTab('tab-alist')">
+                  <div class="q-top-row">
+                    <div class="q-icon purple">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+                    </div>
+                    <span class="q-badge" style="color:var(--accent-purple);">ALIST</span>
+                  </div>
+                  <div>
+                    <div class="q-title">文件系统</div>
+                    <div class="q-desc">网盘与多存储</div>
+                  </div>
+                </div>
+
               </div>
             </div>
           </div>
@@ -332,569 +509,622 @@
 
       </div>
 
-      <!-- ================= TAB 2: 存储矩阵与文件深度分析 ================= -->
-      <div id="tab-storage" class="tab-pane">
-        
-        <div class="glass-panel storage-analysis-panel">
-          <div class="panel-head">
-            <div class="panel-title">
+      <!-- ================= TAB 2: 存储矩阵 (Storage) ================= -->
+      <div id="tab-storage" class="tab-view">
+        <div class="cyber-card">
+          <div class="card-hud-head">
+            <div class="card-hud-title">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--accent-cyan)" stroke-width="2"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"></path><path d="M22 12A10 10 0 0 0 12 2v10z"></path></svg>
               <span>存储空间深度分析 (内部存储 /data/media/0)</span>
             </div>
             <div style="display:flex; align-items:center; gap:6px;">
-              <span class="status-tag ok" id="storage-scan-status-tag">● 数据已就绪</span>
-              <button class="btn-mini-copy" id="btn-trigger-rescan" onclick="triggerStorageRescan()">🔄 重新统计</button>
+              <span class="status-tag green" id="storage-scan-status-tag">● 数据已就绪</span>
+              <button class="btn-hud" id="btn-trigger-rescan" onclick="triggerStorageRescan()">重新统计</button>
             </div>
           </div>
 
-          <div class="storage-hero-summary">
-            <div class="hero-title">存储空间</div>
-            <div class="hero-sub" id="storage-hero-desc">已使用 --，剩余 --，共 --</div>
+          <div style="display:flex; flex-direction:column; gap:3px; margin: 4px 0;">
+            <div style="font-size:1.15em; font-weight:800; color:var(--text-pure);" id="storage-hero-title">存储空间详情</div>
+            <div style="font-size:0.88em; color:var(--text-muted);" id="storage-hero-desc">已使用 --，剩余 --，共 --</div>
           </div>
 
-          <!-- 多段色彩融合比例柱条 -->
-          <div class="multi-segment-bar-wrapper">
-            <div class="multi-segment-bar" id="storage-multi-bar">
-              <div class="seg-item seg-app" style="width: 0%;" title="应用和数据"></div>
-              <div class="seg-item seg-img" style="width: 0%;" title="图片"></div>
-              <div class="seg-item seg-aud" style="width: 0%;" title="音频"></div>
-              <div class="seg-item seg-vid" style="width: 0%;" title="视频"></div>
-              <div class="seg-item seg-apk" style="width: 0%;" title="安装包"></div>
-              <div class="seg-item seg-doc" style="width: 0%;" title="文档"></div>
-              <div class="seg-item seg-arch" style="width: 0%;" title="压缩包"></div>
-              <div class="seg-item seg-oth" style="width: 0%;" title="其他文件"></div>
-            </div>
+          <!-- 多段色彩比例胶囊柱条 -->
+          <div class="multi-seg-bar" style="height:12px; border-radius:6px; margin: 6px 0;" id="storage-multi-bar" title="存储空间深度分类">
+            <div class="seg seg-app" style="width: 0%;" title="应用和数据"></div>
+            <div class="seg seg-img" style="width: 0%;" title="图片相册"></div>
+            <div class="seg seg-aud" style="width: 0%;" title="音乐音频"></div>
+            <div class="seg seg-vid" style="width: 0%;" title="视频媒体"></div>
+            <div class="seg seg-apk" style="width: 0%;" title="安装包 (APK)"></div>
+            <div class="seg seg-doc" style="width: 0%;" title="文档书籍"></div>
+            <div class="seg seg-arch" style="width: 0%;" title="压缩归档"></div>
+            <div class="seg seg-oth" style="width: 0%;" title="系统数据 / 其他"></div>
           </div>
 
-          <!-- 分类列表 (仿 HyperOS / 小米安全中心存储界面) -->
-          <div class="storage-categories-grid" id="storage-categories-list">
-            <div class="cat-card">
-              <div class="cat-left">
-                <span class="cat-dot" style="background:#f59e0b;"></span>
-                <span class="cat-name">应用和数据</span>
-              </div>
-              <div class="cat-right">
-                <span class="cat-size" id="cat-size-app">--</span>
-                <span class="cat-arrow">›</span>
-              </div>
-            </div>
-            <div class="cat-card">
-              <div class="cat-left">
-                <span class="cat-dot" style="background:#f97316;"></span>
-                <span class="cat-name">图片</span>
-              </div>
-              <div class="cat-right">
-                <span class="cat-size" id="cat-size-image">--</span>
-                <span class="cat-arrow">›</span>
+          <!-- 分类列表 (带精准容量与百分比) -->
+          <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap:6px;" id="storage-categories-list">
+            <div class="ep-card">
+              <div class="ep-head">
+                <div class="ep-title-txt"><span class="dot" style="width:8px; height:8px; border-radius:50%; background:#f59e0b;"></span><span>应用和数据</span></div>
+                <div style="display:flex; align-items:baseline; gap:5px;">
+                  <strong class="chip-val" id="cat-size-app">--</strong>
+                  <span class="chip-pct" id="cat-pct-app" style="font-size:0.75em; color:var(--text-dim); font-family:var(--font-mono);">(--%)</span>
+                </div>
               </div>
             </div>
-            <div class="cat-card">
-              <div class="cat-left">
-                <span class="cat-dot" style="background:#ef4444;"></span>
-                <span class="cat-name">音频</span>
-              </div>
-              <div class="cat-right">
-                <span class="cat-size" id="cat-size-audio">--</span>
-                <span class="cat-arrow">›</span>
-              </div>
-            </div>
-            <div class="cat-card">
-              <div class="cat-left">
-                <span class="cat-dot" style="background:#a855f7;"></span>
-                <span class="cat-name">视频</span>
-              </div>
-              <div class="cat-right">
-                <span class="cat-size" id="cat-size-video">--</span>
-                <span class="cat-arrow">›</span>
+            <div class="ep-card">
+              <div class="ep-head">
+                <div class="ep-title-txt"><span class="dot" style="width:8px; height:8px; border-radius:50%; background:#f97316;"></span><span>图片相册</span></div>
+                <div style="display:flex; align-items:baseline; gap:5px;">
+                  <strong class="chip-val" id="cat-size-image">--</strong>
+                  <span class="chip-pct" id="cat-pct-image" style="font-size:0.75em; color:var(--text-dim); font-family:var(--font-mono);">(--%)</span>
+                </div>
               </div>
             </div>
-            <div class="cat-card">
-              <div class="cat-left">
-                <span class="cat-dot" style="background:#3b82f6;"></span>
-                <span class="cat-name">安装包</span>
-              </div>
-              <div class="cat-right">
-                <span class="cat-size" id="cat-size-apk">--</span>
-                <span class="cat-arrow">›</span>
-              </div>
-            </div>
-            <div class="cat-card">
-              <div class="cat-left">
-                <span class="cat-dot" style="background:#10b981;"></span>
-                <span class="cat-name">文档</span>
-              </div>
-              <div class="cat-right">
-                <span class="cat-size" id="cat-size-doc">--</span>
-                <span class="cat-arrow">›</span>
+            <div class="ep-card">
+              <div class="ep-head">
+                <div class="ep-title-txt"><span class="dot" style="width:8px; height:8px; border-radius:50%; background:#ef4444;"></span><span>音乐音频</span></div>
+                <div style="display:flex; align-items:baseline; gap:5px;">
+                  <strong class="chip-val" id="cat-size-audio">--</strong>
+                  <span class="chip-pct" id="cat-pct-audio" style="font-size:0.75em; color:var(--text-dim); font-family:var(--font-mono);">(--%)</span>
+                </div>
               </div>
             </div>
-            <div class="cat-card">
-              <div class="cat-left">
-                <span class="cat-dot" style="background:#06b6d4;"></span>
-                <span class="cat-name">压缩包</span>
-              </div>
-              <div class="cat-right">
-                <span class="cat-size" id="cat-size-archive">--</span>
-                <span class="cat-arrow">›</span>
+            <div class="ep-card">
+              <div class="ep-head">
+                <div class="ep-title-txt"><span class="dot" style="width:8px; height:8px; border-radius:50%; background:#a855f7;"></span><span>视频媒体</span></div>
+                <div style="display:flex; align-items:baseline; gap:5px;">
+                  <strong class="chip-val" id="cat-size-video">--</strong>
+                  <span class="chip-pct" id="cat-pct-video" style="font-size:0.75em; color:var(--text-dim); font-family:var(--font-mono);">(--%)</span>
+                </div>
               </div>
             </div>
-            <div class="cat-card">
-              <div class="cat-left">
-                <span class="cat-dot" style="background:#64748b;"></span>
-                <span class="cat-name">系统数据 / 其他</span>
+            <div class="ep-card">
+              <div class="ep-head">
+                <div class="ep-title-txt"><span class="dot" style="width:8px; height:8px; border-radius:50%; background:#3b82f6;"></span><span>安装包 (APK)</span></div>
+                <div style="display:flex; align-items:baseline; gap:5px;">
+                  <strong class="chip-val" id="cat-size-apk">--</strong>
+                  <span class="chip-pct" id="cat-pct-apk" style="font-size:0.75em; color:var(--text-dim); font-family:var(--font-mono);">(--%)</span>
+                </div>
               </div>
-              <div class="cat-right">
-                <span class="cat-size" id="cat-size-other">--</span>
-                <span class="cat-arrow">›</span>
+            </div>
+            <div class="ep-card">
+              <div class="ep-head">
+                <div class="ep-title-txt"><span class="dot" style="width:8px; height:8px; border-radius:50%; background:#10b981;"></span><span>文档书籍</span></div>
+                <div style="display:flex; align-items:baseline; gap:5px;">
+                  <strong class="chip-val" id="cat-size-doc">--</strong>
+                  <span class="chip-pct" id="cat-pct-doc" style="font-size:0.75em; color:var(--text-dim); font-family:var(--font-mono);">(--%)</span>
+                </div>
+              </div>
+            </div>
+            <div class="ep-card">
+              <div class="ep-head">
+                <div class="ep-title-txt"><span class="dot" style="width:8px; height:8px; border-radius:50%; background:#06b6d4;"></span><span>压缩归档</span></div>
+                <div style="display:flex; align-items:baseline; gap:5px;">
+                  <strong class="chip-val" id="cat-size-archive">--</strong>
+                  <span class="chip-pct" id="cat-pct-archive" style="font-size:0.75em; color:var(--text-dim); font-family:var(--font-mono);">(--%)</span>
+                </div>
+              </div>
+            </div>
+            <div class="ep-card">
+              <div class="ep-head">
+                <div class="ep-title-txt"><span class="dot" style="width:8px; height:8px; border-radius:50%; background:#64748b;"></span><span>系统数据 / 其他</span></div>
+                <div style="display:flex; align-items:baseline; gap:5px;">
+                  <strong class="chip-val" id="cat-size-other">--</strong>
+                  <span class="chip-pct" id="cat-pct-other" style="font-size:0.75em; color:var(--text-dim); font-family:var(--font-mono);">(--%)</span>
+                </div>
               </div>
             </div>
           </div>
 
-          <div class="storage-footer-meta">
-            <span style="font-size:10.5px; color:var(--text-muted);" id="storage-last-scan-time">上次扫描: 尚未完成</span>
-            <span style="font-size:10.5px; color:var(--accent-cyan);">共享根路径: /data/media/0</span>
-          </div>
-
-          <div style="margin-top:4px; padding:8px 10px; background:var(--stat-box-bg); border-radius:6px; border:1px solid var(--glass-border);">
-            <p style="font-size:11px; color:var(--text-sub); line-height:1.5;">
-              💡 <strong>极低功耗分类说明：</strong> 采用纯 Go 静态扫描引擎，启动后常驻内存，每 30 分钟后台静默刷新，不触发高频磁盘唤醒（待机功耗保持约 0.3W）。支持点击右上角「🔄 重新统计」按需刷新。
-            </p>
+          <div style="display:flex; align-items:center; justify-content:space-between; padding:4px 2px; font-size:0.85em; color:var(--text-dim);">
+            <span id="storage-last-scan-time">上次扫描: 尚未完成</span>
+            <span>共享根路径: /data/media/0</span>
           </div>
         </div>
-
       </div>
 
-      <!-- ================= TAB 3: 设备连接 (精简地址中心) ================= -->
-      <div id="tab-network" class="tab-pane">
-        
-        <div class="glass-panel">
-          <div class="panel-head">
-            <div class="panel-title">
+      <!-- ================= TAB 3: 设备连接地址 (Network Endpoints) ================= -->
+      <div id="tab-network" class="tab-view">
+        <div class="cyber-card">
+          <div class="card-hud-head">
+            <div class="card-hud-title">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
               <span>设备连接地址中心 (Device Connection Endpoints)</span>
             </div>
-            <span class="status-tag ok">当前局域网 IP: <strong id="net-ip-head">10.x.x.x</strong></span>
+            <span style="font-size:0.85em; color:var(--text-dim);">局域网 IP: <strong id="net-ip-head" style="color:var(--accent-emerald);">10.x.x.x</strong></span>
           </div>
 
-          <!-- 精简地址列表卡片 -->
-          <div class="device-card-grid" style="margin-top:6px;">
-            
-            <!-- 1. WebDAV 挂载 -->
-            <div class="endpoint-card">
-              <div class="ep-header">
-                <div class="ep-title"><span class="icon">📺</span><strong>WebDAV 挂载</strong><span class="ep-badge">:5244/dav</span></div>
-                <span class="status-tag ok">推荐</span>
+          <div class="endpoint-grid">
+            <div class="ep-card">
+              <div class="ep-head">
+                <div class="ep-title-txt">📺 WebDAV 挂载服务 <span class="status-tag green" style="font-size:0.7em;">推荐</span></div>
+                <span style="font-family:var(--font-mono); font-size:0.8em; color:var(--text-dim);">:5244/dav</span>
               </div>
-              <div class="device-url-box">
-                <span class="code" id="webdav-url-copy-val">http://10.x.x.x:5244/dav</span>
-                <div class="btn-actions-group">
-                  <button class="btn-device-copy" onclick="copyText(document.getElementById('webdav-url-copy-val').innerText, 'WebDAV 端点')">📋 复制</button>
+              <div class="ep-code-box">
+                <code id="webdav-url-copy-val">http://10.x.x.x:5244/dav</code>
+                <button class="btn-copy-action" onclick="copyText(document.getElementById('webdav-url-copy-val').innerText, 'WebDAV 挂载地址')">复制</button>
+              </div>
+            </div>
+
+            <div class="ep-card">
+              <div class="ep-head">
+                <div class="ep-title-txt">⚡ 原生安全 FTP 服务 <span class="status-tag cyan" style="font-size:0.7em;">免密</span></div>
+                <span style="font-family:var(--font-mono); font-size:0.8em; color:var(--text-dim);">:2121</span>
+              </div>
+              <div class="ep-code-box">
+                <code id="ftp-url-copy-val">ftp://10.x.x.x:2121</code>
+                <button class="btn-copy-action" onclick="copyText(document.getElementById('ftp-url-copy-val').innerText, 'FTP 传输地址')">复制</button>
+              </div>
+            </div>
+
+            <div class="ep-card">
+              <div class="ep-head">
+                <div class="ep-title-txt">📁 Samba / SMB 共享 <span class="status-tag amber" style="font-size:0.7em;">网络邻居</span></div>
+                <span style="font-family:var(--font-mono); font-size:0.8em; color:var(--text-dim);">:445</span>
+              </div>
+              <div class="ep-code-box">
+                <code id="smb-url-copy-val">\\10.x.x.x\PocketNAS</code>
+                <button class="btn-copy-action" onclick="copyText(document.getElementById('smb-url-copy-val').innerText, 'SMB 共享地址')">复制</button>
+              </div>
+            </div>
+
+            <div class="ep-card">
+              <div class="ep-head">
+                <div class="ep-title-txt">📂 AList / OpenList <span class="status-tag" style="font-size:0.7em;">多网盘</span></div>
+                <span style="font-family:var(--font-mono); font-size:0.8em; color:var(--text-dim);">:5244</span>
+              </div>
+              <div class="ep-code-box">
+                <code id="alist-url-copy-val">http://10.x.x.x:5244</code>
+                <div style="display:flex; gap:3px;">
+                  <button class="btn-copy-action" onclick="copyText(document.getElementById('alist-url-copy-val').innerText, 'AList 地址')">复制</button>
+                  <a class="btn-open-action" id="btn-open-alist-net" href="http://10.x.x.x:5244" target="_blank">打开</a>
                 </div>
               </div>
             </div>
 
-            <!-- 2. FTP 文件服务 -->
-            <div class="endpoint-card">
-              <div class="ep-header">
-                <div class="ep-title"><span class="icon">⚡</span><strong>FTP 文件服务</strong><span class="ep-badge">:2121</span></div>
-                <span class="status-tag ok">免密</span>
+            <div class="ep-card">
+              <div class="ep-head">
+                <div class="ep-title-txt">⚡ 文件闪传 · FastSend <span class="status-tag" style="font-size:0.7em; color:var(--accent-crimson);">极速</span></div>
+                <span style="font-family:var(--font-mono); font-size:0.8em; color:var(--text-dim);">:2333</span>
               </div>
-              <div class="device-url-box">
-                <span class="code" id="ftp-url-copy-val">ftp://10.x.x.x:2121</span>
-                <div class="btn-actions-group">
-                  <button class="btn-device-copy" onclick="copyText(document.getElementById('ftp-url-copy-val').innerText, 'FTP 链接')">📋 复制</button>
+              <div class="ep-code-box">
+                <code id="fsend-url-copy-val">http://10.x.x.x:2333</code>
+                <div style="display:flex; gap:3px;">
+                  <button class="btn-copy-action" onclick="copyText(document.getElementById('fsend-url-copy-val').innerText, '文件闪传地址')">复制</button>
+                  <a class="btn-open-action" id="btn-open-fsend-net" href="http://10.x.x.x:2333" target="_blank">打开</a>
                 </div>
               </div>
             </div>
 
-            <!-- 3. SMB / CIFS 共享 -->
-            <div class="endpoint-card">
-              <div class="ep-header">
-                <div class="ep-title"><span class="icon">📁</span><strong>SMB / CIFS 共享</strong><span class="ep-badge">:445</span></div>
-                <span class="status-tag ok">网络邻居</span>
+            <div class="ep-card">
+              <div class="ep-head">
+                <div class="ep-title-txt">🌐 PocketNAS 控制台 <span class="status-tag cyan" style="font-size:0.7em;">主控</span></div>
+                <span style="font-family:var(--font-mono); font-size:0.8em; color:var(--text-dim);">:8080</span>
               </div>
-              <div class="device-url-box">
-                <span class="code" id="smb-url-copy-val">\\10.x.x.x\PocketNAS</span>
-                <div class="btn-actions-group">
-                  <button class="btn-device-copy" onclick="copyText(document.getElementById('smb-url-copy-val').innerText, 'SMB 路径')">📋 复制</button>
+              <div class="ep-code-box">
+                <code id="webui-url-copy-val">http://10.x.x.x:8080</code>
+                <div style="display:flex; gap:3px;">
+                  <button class="btn-copy-action" onclick="copyText(document.getElementById('webui-url-copy-val').innerText, '控制台地址')">复制</button>
+                  <a class="btn-open-action" href="http://10.x.x.x:8080" target="_blank">打开</a>
                 </div>
               </div>
             </div>
-
-            <!-- 4. AList / OpenList 聚合后台 -->
-            <div class="endpoint-card">
-              <div class="ep-header">
-                <div class="ep-title"><span class="icon">📂</span><strong>AList / OpenList</strong><span class="ep-badge">:5244</span></div>
-                <span class="status-tag ok">网页端</span>
-              </div>
-              <div class="device-url-box">
-                <span class="code" id="alist-url-copy-val">http://10.x.x.x:5244</span>
-                <div class="btn-actions-group">
-                  <button class="btn-device-copy" onclick="copyText(document.getElementById('alist-url-copy-val').innerText, 'AList 链接')">📋 复制</button>
-                  <a class="btn-device-copy" id="btn-open-alist-net" href="http://127.0.0.1:5244" target="_blank" style="text-decoration:none; background:rgba(0,242,254,0.15); color:var(--accent-cyan); border:1px solid rgba(0,242,254,0.3);">↗ 打开</a>
-                </div>
-              </div>
-            </div>
-
-            <!-- 5. 文件闪传 (FastSend 端口: 2333 与官方域名 fsend.cn) -->
-            <div class="endpoint-card" style="border: 1px solid rgba(245, 158, 11, 0.35);">
-              <div class="ep-header">
-                <div class="ep-title"><span class="icon" style="color:var(--accent-orange);">⚡</span><strong>文件闪传 (FastSend)</strong><span class="ep-badge" style="color:var(--accent-orange); background:rgba(245,158,11,0.15); border-color:rgba(245,158,11,0.3);">:2333</span></div>
-                <span class="status-tag ok" style="color:var(--accent-orange); background:rgba(245,158,11,0.12); border:1px solid rgba(245,158,11,0.25);">局域网极速互传</span>
-              </div>
-              <div class="device-url-box">
-                <span class="code" id="fsend-url-copy-val">http://10.x.x.x:2333</span>
-                <div class="btn-actions-group">
-                  <button class="btn-device-copy" style="background:linear-gradient(135deg, #d97706, #f59e0b);" onclick="copyText(document.getElementById('fsend-url-copy-val').innerText, '文件闪传链接')">📋 复制</button>
-                  <a class="btn-device-copy" id="btn-open-fsend-net" href="http://127.0.0.1:2333" target="_blank" style="text-decoration:none; background:rgba(245,158,11,0.2); color:var(--accent-orange); border:1px solid rgba(245,158,11,0.4);">↗ 打开</a>
-                  <a class="btn-device-copy" href="http://fsend.cn" target="_blank" style="text-decoration:none; background:rgba(0,242,254,0.12); color:var(--accent-cyan); border:1px solid rgba(0,242,254,0.3);">🌐 官网(fsend.cn)</a>
-                </div>
-              </div>
-            </div>
-
-            <!-- 6. PocketNAS Web 控制台 -->
-            <div class="endpoint-card">
-              <div class="ep-header">
-                <div class="ep-title"><span class="icon">🌐</span><strong>PocketNAS 控制台</strong><span class="ep-badge">:8080</span></div>
-                <span class="status-tag ok">主控</span>
-              </div>
-              <div class="device-url-box">
-                <span class="code" id="webui-url-copy-val">http://10.x.x.x:8080</span>
-                <div class="btn-actions-group">
-                  <button class="btn-device-copy" onclick="copyText(document.getElementById('webui-url-copy-val').innerText, '控制台链接')">📋 复制</button>
-                  <a class="btn-device-copy" href="/" target="_blank" style="text-decoration:none; background:rgba(0,242,254,0.15); color:var(--accent-cyan); border:1px solid rgba(0,242,254,0.3);">↗ 打开</a>
-                </div>
-              </div>
-            </div>
-
-            <!-- 7. SSH / SFTP 远程终端 -->
-            <div class="endpoint-card">
-              <div class="ep-header">
-                <div class="ep-title"><span class="icon">🔒</span><strong>SSH / SFTP 终端</strong><span class="ep-badge">:22</span></div>
-                <span class="status-tag ok">Root</span>
-              </div>
-              <div class="device-url-box">
-                <span class="code" id="ssh-url-copy-val">ssh root@10.x.x.x -p 22</span>
-                <div class="btn-actions-group">
-                  <button class="btn-device-copy" onclick="copyText(document.getElementById('ssh-url-copy-val').innerText, 'SSH 命令')">📋 复制</button>
-                </div>
-              </div>
-            </div>
-
           </div>
 
-          <!-- 底部跳转详细教程引导横幅 (结构优化，彻底防止文字重叠) -->
-          <div class="help-guide-banner" onclick="openHelpModal()">
-            <div class="help-guide-left">
-              <span class="help-guide-icon">📖</span>
-              <div class="help-guide-text">
-                <strong>不知道如何挂载或连接？</strong>
-                <p>查看 Windows / macOS / 智能电视 / 手机详细图文连接配置教程与常见问题解答</p>
+          <div class="ep-card" style="border: 1px dashed var(--accent-cyan-border); margin-top:8px; cursor:pointer;" onclick="openHelpModal()">
+            <div style="display:flex; align-items:center; justify-content:space-between;">
+              <div style="display:flex; align-items:center; gap:8px;">
+                <span style="font-size:1.3em;">📖</span>
+                <div>
+                  <strong style="color:var(--text-pure); font-size:0.95em;">不知道如何在电脑或电视上挂载？</strong>
+                  <p style="font-size:0.8em; color:var(--text-muted);">点击查看 macOS 访达 / Windows 映射磁盘 / Kodi / Infuse 4K 秒播图文教程</p>
+                </div>
               </div>
+              <button class="btn-hud" style="color:var(--accent-cyan); border-color:var(--accent-cyan-border);">查看教程 ➔</button>
             </div>
-            <button class="btn-help-guide-action">查看详细连接教程 ➔</button>
           </div>
-
         </div>
-
       </div>
-      
+
       <!-- ================= TAB 4: NAS 服务中心 ================= -->
-      <div id="tab-services" class="tab-pane">
-        
-        <div class="glass-panel">
-          <div class="panel-head">
-            <div class="panel-title">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--accent-green)" stroke-width="2"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect><rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect><line x1="6" y1="6" x2="6.01" y2="6"></line><line x1="6" y1="18" x2="6.01" y2="18"></line></svg>
-              <span>NAS 服务中心 (Service Center)</span>
+      <div id="tab-services" class="tab-view">
+        <div class="cyber-card">
+          <div class="card-hud-head">
+            <div class="card-hud-title">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="7" rx="2"></rect><rect x="2" y="14" width="20" height="7" rx="2"></rect><line x1="6" y1="6.5" x2="6.01" y2="6.5"></line><line x1="6" y1="17.5" x2="6.01" y2="17.5"></line></svg>
+              <span>NAS 服务管理中心 (Service Hub)</span>
             </div>
             <div style="display:flex; align-items:center; gap:6px;">
-              <span class="status-tag ok" id="services-summary-badge">运行中: -- | 已停止: --</span>
-              <button class="btn-header-action" onclick="openAddServiceModal()">+ 添加服务</button>
+              <span class="status-tag cyan" id="services-stat-summary">运行中: -- / --</span>
+              <button class="btn-hud" onclick="openAddServiceModal()">+ 添加服务</button>
             </div>
           </div>
 
-          <!-- 服务卡片列表 -->
-          <div class="service-center-grid" id="service-center-list">
-            <!-- 动态渲染服务卡片 -->
+          <div class="services-grid-hub" id="service-center-container">
+            <!-- 由 JS 动态渲染服务卡片 -->
           </div>
         </div>
-
       </div>
 
-      <!-- ================= TAB 5: 传输速度测试 ================= -->
-      <div id="tab-speedtest" class="tab-pane">
+      <!-- ================= TAB 5: 文件系统 AList ================= -->
+      <div id="tab-alist" class="tab-view">
+        <div class="embedded-container">
+          <div class="embedded-topbar">
+            <div style="display:flex; align-items:center; gap:6px;">
+              <strong style="color:var(--text-pure); font-size:0.95em;">📁 文件管理 (AList / OpenList)</strong>
+              <span class="status-tag green" style="font-size:0.7em;">:5244</span>
+            </div>
+            <div style="display:flex; gap:6px;">
+              <button class="btn-hud" onclick="reloadAListFrame()">🔄 刷新</button>
+              <a class="btn-hud" id="btn-open-alist" href="http://127.0.0.1:5244" target="_blank">↗ 外部新窗口打开</a>
+            </div>
+          </div>
+          <div id="alist-view-wrapper" style="flex:1; display:flex; flex-direction:column;">
+            <iframe class="embedded-iframe" id="alist-frame" src="about:blank"></iframe>
+          </div>
+        </div>
+      </div>
+
+      <!-- ================= TAB 6: 文件上传 (文件闪传) ================= -->
+      <div id="tab-fsend" class="tab-view">
+        <div class="embedded-container">
+          <div class="embedded-topbar">
+            <div style="display:flex; align-items:center; gap:6px;">
+              <strong style="color:var(--text-pure); font-size:0.95em;">⚡ 文件上传 · FastSend 极速互传</strong>
+              <span class="status-tag" style="font-size:0.7em; color:var(--accent-crimson); background:var(--accent-crimson-sub);">:2333</span>
+            </div>
+            <div style="display:flex; gap:6px;">
+              <button class="btn-hud" onclick="reloadFSendFrame()">🔄 刷新</button>
+              <a class="btn-hud" id="btn-open-fsend" href="http://127.0.0.1:2333" target="_blank">↗ 外部新窗口打开</a>
+            </div>
+          </div>
+          <div id="fsend-view-wrapper" style="flex:1; display:flex; flex-direction:column;">
+            <iframe class="embedded-iframe" id="fsend-frame" src="about:blank"></iframe>
+          </div>
+        </div>
+      </div>
+
+      <!-- ================= TAB 7: 传输速度测试 (Speedtest) ================= -->
+      <div id="tab-speedtest" class="tab-view">
+        <div class="speed-panel-hud">
+          <div class="card-hud-head">
+            <div class="card-hud-title">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--accent-crimson)" stroke-width="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"></path></svg>
+              <span>传输速度测试 (双向吞吐与延迟压测)</span>
+            </div>
+            <span style="font-size:0.8em; color:var(--text-dim);">当前设备 ↔ NAS 核心</span>
+          </div>
+
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; text-align:center;">
+            <div class="ep-card">
+              <span style="font-size:0.8em; color:var(--text-dim);">Ping 延迟</span>
+              <div style="font-size:1.6em; font-weight:800; color:var(--text-pure); font-family:var(--font-mono);"><span id="st-ping-val">0</span> <small style="font-size:0.5em; color:var(--text-muted);">ms</small></div>
+            </div>
+            <div class="ep-card">
+              <span style="font-size:0.8em; color:var(--text-dim);">Jitter 抖动</span>
+              <div style="font-size:1.6em; font-weight:800; color:var(--text-pure); font-family:var(--font-mono);"><span id="st-jitter-val">0</span> <small style="font-size:0.5em; color:var(--text-muted);">ms</small></div>
+            </div>
+          </div>
+
+          <div class="speed-dials-box">
+            <div class="dial-card">
+              <span style="font-size:0.9em; font-weight:700; color:var(--text-pure); margin-bottom:4px;">客户端 ➔ NAS (上传)</span>
+              <div class="dial-svg-box">
+                <svg class="dial-svg" viewBox="0 0 180 105">
+                  <path class="gauge-bg" d="M 15 95 A 75 75 0 0 1 165 95"></path>
+                  <path class="gauge-val" id="gauge-up-arc" d="M 15 95 A 75 75 0 0 1 165 95"></path>
+                </svg>
+                <div class="dial-center-val">
+                  <span class="dial-num-text" id="st-up-val">0.00</span>
+                  <span style="font-size:0.75em; color:var(--text-dim); font-family:var(--font-mono);">MB/s</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="dial-card">
+              <span style="font-size:0.9em; font-weight:700; color:var(--text-pure); margin-bottom:4px;">NAS ➔ 客户端 (下载)</span>
+              <div class="dial-svg-box">
+                <svg class="dial-svg" viewBox="0 0 180 105">
+                  <path class="gauge-bg" d="M 15 95 A 75 75 0 0 1 165 95"></path>
+                  <path class="gauge-val" id="gauge-down-arc" d="M 15 95 A 75 75 0 0 1 165 95"></path>
+                </svg>
+                <div class="dial-center-val">
+                  <span class="dial-num-text" id="st-down-val">0.00</span>
+                  <span style="font-size:0.75em; color:var(--text-dim); font-family:var(--font-mono);">MB/s</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div style="display:flex; flex-direction:column; align-items:center; gap:6px; margin-top:4px;">
+            <button class="btn-speed-run" id="btn-start-speedtest" onclick="toggleSpeedtest()">开始测速</button>
+            <div style="font-size:0.8em; color:var(--text-muted);" id="st-status-msg">准备就绪 · 双向满载压测每次持续约 6 秒</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ================= TAB 8: Tailscale 远程穿透与自定义链接 ================= -->
+      <div id="tab-tailscale" class="tab-view">
         
-        <div class="speed-modal-card">
-          
-          <div class="speed-modal-head">
-            <div class="speed-modal-title">传输速度测试 (当前设备 ↔ NAS)</div>
-            <div class="speed-modal-close" onclick="switchTab('tab-overview')">✕</div>
+        <div class="cyber-card">
+          <div class="card-hud-head">
+            <div class="card-hud-title">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--accent-emerald)" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"></path><path d="M2 12h20"></path></svg>
+              <span>Tailscale 虚拟专用网与异地远程挂载中心</span>
+            </div>
+            <span class="status-tag green" style="font-size:0.75em;">WireGuard P2P 直连</span>
           </div>
 
-          <div class="speed-latency-grid">
-            <div class="speed-latency-col">
-              <div class="label">Ping 延迟</div>
-              <div class="value"><span id="st-ping-val">0</span><span class="unit">ms</span></div>
-            </div>
-            <div class="speed-latency-col">
-              <div class="label">Jitter 抖动</div>
-              <div class="value"><span id="st-jitter-val">0</span><span class="unit">ms</span></div>
-            </div>
+          <div style="display:flex; flex-wrap:wrap; gap:8px; align-items:center; background:var(--bg-well-deep); padding:8px 10px; border-radius:var(--radius-sm); border:1px solid var(--border-line); margin:4px 0;">
+            <label style="font-weight:700; color:var(--text-pure); font-size:0.9em; white-space:nowrap;">手机 Tailscale 固定 IP / MagicDNS:</label>
+            <input type="text" id="input-tailscale-ip" placeholder="如: 100.100.88.99 或 pocketnas.ts.net" style="flex:1; min-width:200px; background:var(--bg-well); border:1px solid var(--border-line); color:var(--text-pure); padding:5px 8px; border-radius:4px; font-family:var(--font-mono); font-size:0.9em;">
+            <button class="btn-copy-action" style="padding:5px 12px;" onclick="saveTailscaleIP()">💾 保存配置</button>
           </div>
 
-          <div class="speed-gauges-grid">
-            <div class="speed-gauge-card">
-              <div class="speed-gauge-title">客户端 ➔ NAS (上传)</div>
-              <div class="speed-dial-wrapper">
-                <svg class="speed-dial-svg" viewBox="0 0 200 115">
-                  <path class="gauge-track" d="M 25,100 A 75,75 0 0,1 175,100" />
-                  <path id="gauge-up-arc" class="gauge-progress" d="M 25,100 A 75,75 0 0,1 175,100" />
-                </svg>
-                <div class="speed-dial-center">
-                  <div class="speed-dial-num" id="st-up-val">0.00</div>
-                  <div class="speed-dial-unit">MB/s</div>
-                  <div class="speed-dial-bar"></div>
-                </div>
-              </div>
-            </div>
-
-            <div class="speed-gauge-card">
-              <div class="speed-gauge-title">NAS ➔ 客户端 (下载)</div>
-              <div class="speed-dial-wrapper">
-                <svg class="speed-dial-svg" viewBox="0 0 200 115">
-                  <path class="gauge-track" d="M 25,100 A 75,75 0 0,1 175,100" />
-                  <path id="gauge-down-arc" class="gauge-progress" d="M 25,100 A 75,75 0 0,1 175,100" />
-                </svg>
-                <div class="speed-dial-center">
-                  <div class="speed-dial-num" id="st-down-val">0.00</div>
-                  <div class="speed-dial-unit">MB/s</div>
-                  <div class="speed-dial-bar"></div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="speed-footer-action">
-            <button class="btn-speed-pink" id="btn-start-speedtest" onclick="toggleSpeedtest()">开始</button>
-            <div class="speed-live-msg">
-              <span class="dot"></span>
-              <span id="st-status-msg">准备就绪 · 双向测速每次持续 6 秒以上</span>
-            </div>
-          </div>
-
+          <div class="endpoint-grid" id="tailscale-endpoints-grid"></div>
         </div>
 
-      </div>
-
-      <!-- ================= TAB 6: AList 内嵌文件管理 ================= -->
-      <div id="tab-alist" class="tab-pane">
-        <div class="glass-panel alist-panel">
-          <div class="alist-topbar">
-            <div style="display:flex; align-items:center; gap:8px;">
-              <span style="font-size:13px; font-weight:700; color:var(--text-main);">📁 AList 私人云存储</span>
-              <span class="status-tag ok" id="alist-badge-status">● 运行中</span>
+        <div class="cyber-card">
+          <div class="card-hud-head">
+            <div class="card-hud-title">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--accent-cyan)" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
+              <span>自定义穿透与常用网页直达小模块</span>
             </div>
-            <div style="display:flex; gap:6px;">
-              <button class="btn-mini-copy" onclick="reloadAListFrame()">🔄 刷新</button>
-              <a class="btn-mini-copy" id="btn-open-alist" href="http://127.0.0.1:5244" target="_blank" style="text-decoration:none;">↗ 外部打开</a>
-            </div>
+            <button class="btn-hud" onclick="openAddCustomLinkModal()">+ 添加自定义链接</button>
           </div>
-          <iframe id="alist-frame" class="alist-frame" src="about:blank"></iframe>
-        </div>
-      </div>
 
-      <!-- ================= TAB 7: 文件闪传内嵌 ================= -->
-      <div id="tab-fsend" class="tab-pane">
-        <div class="glass-panel alist-panel">
-          <div class="alist-topbar">
-            <div style="display:flex; align-items:center; gap:8px;">
-              <span style="font-size:13px; font-weight:700; color:var(--text-main);">⚡ 文件闪传 (FSend)</span>
-              <span class="status-tag ok">● 端口 :2333</span>
-              <span style="font-size:10.5px; color:var(--text-muted); display:inline-block; margin-left:6px;">💡 需先在手机打开「文件闪传」App 保持后台运行</span>
-            </div>
-            <div style="display:flex; gap:6px;">
-              <button class="btn-mini-copy" onclick="reloadFSendFrame()">🔄 刷新</button>
-              <a class="btn-mini-copy" id="btn-open-fsend" href="http://127.0.0.1:2333" target="_blank" style="text-decoration:none;">↗ 外部打开</a>
-              <a class="btn-mini-copy" href="http://fsend.cn" target="_blank" style="text-decoration:none; background:rgba(0,242,254,0.12); color:var(--accent-cyan);">🌐 官方主页</a>
-            </div>
-          </div>
-          <iframe id="fsend-frame" class="alist-frame" src="about:blank"></iframe>
+          <div class="services-grid-hub" id="custom-links-container"></div>
         </div>
+
       </div>
 
     </main>
 
   </div>
 
-    <!-- ================= 帮助 / 连接教程 弹窗 (Help Modal) ================= -->
-  <div id="help-modal" class="modal-overlay" onclick="closeHelpModalOnBackdrop(event)">
-    <div class="modal-card">
-      <div class="modal-head">
-        <div class="modal-title">📖 PocketNAS Pro 连接与使用教程</div>
-        <div class="modal-close" onclick="closeHelpModal()">✕</div>
+  <!-- 设置弹窗 -->
+  <div class="hud-dialog-mask" id="modal-settings" onclick="closeModalOnMask(event, 'modal-settings')">
+    <div class="hud-dialog-card">
+      <div class="dialog-header">
+        <div class="dialog-title">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--accent-cyan)" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+          <span>PocketNAS 偏好与界面设置 (方案一)</span>
+        </div>
+        <button class="btn-hud-icon" onclick="closeSettingsModal()">✕</button>
       </div>
-      
-      <div class="modal-body help-accordion">
-        
-        <!-- 1. 文件闪传使用教程 -->
-        <details class="help-section" open>
-          <summary>⚡ 文件闪传 (FastSend :2333 / fsend.cn) 使用教程</summary>
-          <div class="help-content">
-            <p><strong>• 局域网网页直连：</strong>在电脑或其它手机浏览器输入 <code>http://手机IP:2333</code> 即可免登录直接浏览手机相册、视频，支持多文件高速批量下载与上传。</p>
-            <p><strong>• 官方域名配对：</strong>访问 <code>http://fsend.cn</code> 扫码或输入配对码，跨网络轻松连接传输。</p>
-            <p><strong>• 注意事项：</strong>请先在手机端打开「文件闪传」App 并保持后台运行，若端口被占用可在设置中自定义。</p>
-          </div>
-        </details>
 
-        <!-- 2. WebDAV 教程 -->
-        <details class="help-section">
-          <summary>📺 WebDAV 局域网挂载教程 (Mac / Windows / 电视 · 推荐 ⭐)</summary>
-          <div class="help-content">
-            <p><strong>• macOS 访达挂载：</strong>按 <code>Cmd + K</code>（或点击菜单栏「前往」➔「连接服务器」），输入 <code>http://手机IP:5244/dav</code> 点击连接即可挂载为本地原生网络磁盘卷标。</p>
-            <p><strong>• Windows 映射网络驱动器：</strong>打开「此电脑」，点击顶部「...」或空白处右键「映射网络驱动器」，盘符选择 <code>Z:</code>，文件夹输入 <code>http://手机IP:5244/dav</code> 完成挂载。</p>
-            <p><strong>• 智能电视 / 手机播放器 (Kodi / Infuse / 影视仓 / nPlayer)：</strong>添加 WebDAV 源，地址填入 <code>http://手机IP:5244/dav</code>，局域网极速直连 4K 原画免解压秒播。</p>
+      <div class="dialog-body">
+        <div class="cyber-card" style="padding:8px 10px;">
+          <div style="font-weight:700; color:var(--text-pure); font-size:0.92em;">🔤 界面字体大小</div>
+          <p style="font-size:0.78em; color:var(--text-muted); margin-bottom:4px;">调整界面文字与数值尺寸 (一次修改，全端设备同步)</p>
+          <div class="choice-chip-group" id="group-font-scale">
+            <button class="choice-chip" data-scale="compact" onclick="selectFontScale('compact')">紧凑</button>
+            <button class="choice-chip active" data-scale="standard" onclick="selectFontScale('standard')">标准 (推荐)</button>
+            <button class="choice-chip" data-scale="comfort" onclick="selectFontScale('comfort')">舒适</button>
+            <button class="choice-chip" data-scale="large" onclick="selectFontScale('large')">大字</button>
           </div>
-        </details>
+        </div>
 
-        <!-- 3. FTP 教程 -->
-        <details class="help-section">
-          <summary>⚡ 24/7 原生安全 FTP 服务使用教程</summary>
-          <div class="help-content">
-            <p><strong>• 连接地址：</strong><code>ftp://手机IP:2121</code></p>
-            <p><strong>• 认证模式：</strong>支持匿名免密登录（用户名留空或填 <code>anonymous</code>，密码留空）。</p>
-            <p><strong>• 推荐客户端：</strong>手机端 MT 管理器、电脑端 FileZilla / WinSCP / Total Commander，千兆物理满速读写。</p>
+        <div class="cyber-card" style="padding:8px 10px;">
+          <div style="font-weight:700; color:var(--text-pure); font-size:0.92em;">✨ 物理动效与悬浮特效</div>
+          <p style="font-size:0.78em; color:var(--text-muted); margin-bottom:4px;">控制卡片 3D 旋转与悬浮动画，低性能设备推荐轻量或关闭</p>
+          <div class="choice-chip-group" id="group-motion">
+            <button class="choice-chip" data-motion="full" onclick="selectMotion('full')">完整 3D 动效</button>
+            <button class="choice-chip active" data-motion="light" onclick="selectMotion('light')">轻量悬浮 (默认)</button>
+            <button class="choice-chip" data-motion="off" onclick="selectMotion('off')">关闭全部动效</button>
           </div>
-        </details>
+        </div>
 
-        <!-- 4. SMB / CIFS 教程 -->
-        <details class="help-section">
-          <summary>📁 SMB / CIFS 局域网网络邻居教程</summary>
-          <div class="help-content">
-            <p><strong>• Windows 连接：</strong>在文件资源管理器地址栏输入 <code>\\手机IP\PocketNAS</code> 直接访问。</p>
-            <p><strong>• macOS 连接：</strong>访达按 <code>Cmd + K</code> 输入 <code>smb://手机IP/PocketNAS</code> 连接。</p>
-            <p><strong>• 提示：</strong>推荐通过「多系统工具箱」或手机内置 SMB 服务开启 445 端口共享。</p>
+        <div class="cyber-card" style="padding:8px 10px;">
+          <div style="font-weight:700; color:var(--text-pure); font-size:0.92em;">📦 页面内嵌 (IFrame) 模式</div>
+          <p style="font-size:0.78em; color:var(--text-muted); margin-bottom:4px;">关闭后文件系统和文件闪传将显示独立卡片并在外部打开</p>
+          <div style="display:flex; gap:12px; margin-top:4px;">
+            <label style="display:flex; align-items:center; gap:5px; font-size:0.88em; cursor:pointer;">
+              <input type="checkbox" id="chk-embed-alist" checked onchange="handleEmbeddingChange()">
+              <span>内嵌 AListLite 文件系统</span>
+            </label>
+            <label style="display:flex; align-items:center; gap:5px; font-size:0.88em; cursor:pointer;">
+              <input type="checkbox" id="chk-embed-fsend" checked onchange="handleEmbeddingChange()">
+              <span>内嵌文件闪传</span>
+            </label>
           </div>
-        </details>
+        </div>
 
-        <!-- 5. AList / OpenList 教程 -->
-        <details class="help-section">
-          <summary>📂 AList / OpenList 聚合网盘教程</summary>
-          <div class="help-content">
-            <p><strong>• 浏览器访问：</strong><code>http://手机IP:5244</code></p>
-            <p><strong>• 功能说明：</strong>在手机上配合 AListLite 运行，支持百度网盘、阿里云盘、115、OneDrive 与本地存储一体化聚合管理与 Web 预览。</p>
+        <div class="cyber-card" style="padding:8px 10px;">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <div>
+              <div style="font-weight:700; color:var(--text-pure); font-size:0.92em;">🧭 导航栏项目排序与显隐</div>
+              <p style="font-size:0.78em; color:var(--text-muted);">自定义顶部导航的展示顺序或隐藏不常用的项目</p>
+            </div>
+            <button class="btn-hud" style="font-size:0.78em;" onclick="resetNavSettings()">恢复默认</button>
           </div>
-        </details>
+          <div style="display:flex; flex-direction:column; gap:4px; margin-top:6px;" id="settings-nav-list"></div>
+        </div>
 
-        <!-- 6. SSH 教程 -->
-        <details class="help-section">
-          <summary>🔒 SSH / SFTP 远程终端教程</summary>
-          <div class="help-content">
-            <p><strong>• 连接命令：</strong><code>ssh root@手机IP -p 22</code></p>
-            <p><strong>• 工具支持：</strong>Termius、PuTTY、JuiceSSH、FinalShell 等，获取完整 Android Root Shell 权限。</p>
+        <div class="cyber-card" style="padding:8px 10px;">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <div>
+              <div style="font-weight:700; color:var(--text-pure); font-size:0.92em;">⚙️ NAS 服务展示排序与隐藏</div>
+              <p style="font-size:0.78em; color:var(--text-muted);">调整服务中心及首页卡片展示顺序；隐藏仅隐藏展示，不停止服务</p>
+            </div>
+            <button class="btn-hud" style="font-size:0.78em;" onclick="resetServiceSettings()">恢复默认</button>
           </div>
-        </details>
+          <div style="display:flex; flex-direction:column; gap:4px; margin-top:6px;" id="settings-services-list"></div>
+        </div>
+      </div>
 
-        <!-- 7. 常见问题 FAQ -->
-        <details class="help-section">
-          <summary>❓ 常见问题 FAQ</summary>
-          <div class="help-content">
-            <p><strong>Q: 为什么电脑或电视打不开连接地址？</strong></p>
-            <p>A: 请确保手机与电脑/电视连接在同一个 Wi-Fi 局域网（或路由器同一网段下），且路由器未开启 AP 隔离功能。</p>
-            <p><strong>Q: 为什么手机 IP 发生变化？</strong></p>
-            <p>A: 手机重新连接 Wi-Fi 时 DHCP 可能重新分配 IP，建议在路由器后台为手机绑定固定静态 IP。</p>
-            <p><strong>Q: 熄屏后服务会不会被杀？</strong></p>
-            <p>A: PocketNAS Pro 采用 Go 原生单进程守护，熄屏待机功耗仅约 0.3W；请在手机系统电池设置中将对应 Root 管理器（如 KernelSU/Magisk/AListLite）加入后台白名单/无限制。</p>
-          </div>
-        </details>
-
+      <div style="padding:10px 14px; border-top:1px solid var(--border-line); display:flex; justify-content:space-between; align-items:center;">
+        <span style="font-size:0.8em; color:var(--text-dim);">修改将保存至 config/config.json</span>
+        <div style="display:flex; gap:6px;">
+          <button class="btn-hud" onclick="closeSettingsModal()">取消</button>
+          <button class="btn-copy-action" style="padding:5px 16px; font-size:0.9em;" onclick="saveAllSettingsToBackend()">💾 保存配置并全端生效</button>
+        </div>
       </div>
     </div>
   </div>
 
-  <!-- ================= 服务详情弹窗 (Service Detail Modal) ================= -->
-  <div id="service-detail-modal" class="modal-overlay" onclick="closeServiceDetailOnBackdrop(event)">
-    <div class="modal-card">
-      <div class="modal-head">
-        <div class="modal-title" id="sd-modal-title">服务详情</div>
-        <div class="modal-close" onclick="closeServiceDetailModal()">✕</div>
+  <!-- 帮助模态框 -->
+  <div class="hud-dialog-mask" id="modal-help" onclick="closeModalOnMask(event, 'modal-help')">
+    <div class="hud-dialog-card" style="max-width:620px;">
+      <div class="dialog-header">
+        <div class="dialog-title">
+          <span>📖 PocketNAS Pro 多端挂载与使用教程</span>
+        </div>
+        <button class="btn-hud-icon" onclick="closeHelpModal()">✕</button>
       </div>
-      
-      <div class="modal-body" id="sd-modal-body">
-        <!-- 动态生成详情内容 -->
-      </div>
-    </div>
-  </div>
+      <div class="dialog-body">
+        <div class="ep-card">
+          <div class="ep-title-txt">📺 WebDAV 局域网挂载教程 (推荐 ⭐)</div>
+          <p style="font-size:0.82em; color:var(--text-muted); line-height:1.5;">
+            • <strong>macOS 访达</strong>：桌面按 <code>Cmd + K</code>，输入 <code>http://[手机IP]:5244/dav</code> 连接即可将手机存储挂载为 Mac 原生网络磁盘。<br>
+            • <strong>Windows 映射驱动器</strong>：打开「此电脑」，点击「映射网络驱动器」，文件夹输入 <code>http://[手机IP]:5244/dav</code> 即可分配盘符。<br>
+            • <strong>智能电视 / Kodi / Infuse / 影视仓</strong>：添加 WebDAV 视频源，端口 5244，路径 <code>/dav</code>，千兆局域网免解压秒播 4K 原画原盘！
+          </p>
+        </div>
 
-  <!-- ================= 添加/编辑自定义服务弹窗 (Service Edit Modal) ================= -->
-  <div id="service-edit-modal" class="modal-overlay" onclick="closeServiceEditOnBackdrop(event)">
-    <div class="modal-card">
-      <div class="modal-head">
-        <div class="modal-title" id="se-modal-title">添加自定义服务</div>
-        <div class="modal-close" onclick="closeServiceEditModal()">✕</div>
-      </div>
-      
-      <div class="modal-body">
-        <form id="service-edit-form" onsubmit="saveCustomService(event)" class="service-form">
-          <input type="hidden" id="se-id" value="">
-          
-          <div class="form-group">
-            <label for="se-name">服务显示名称 *</label>
-            <input type="text" id="se-name" placeholder="例如: OpenList / Jellyfin / Aria2" required>
-          </div>
+        <div class="ep-card">
+          <div class="ep-title-txt">🌐 Tailscale 远程穿透全端挂载教程</div>
+          <p style="font-size:0.82em; color:var(--text-muted); line-height:1.5;">
+            • <strong>出差与户外直连</strong>：在电脑/电视登录 Tailscale，使用 <code>http://[Tailscale固定IP]:5244/dav</code>，无论何时何地均可直接挂载家里 NAS 手机进行 4K 播放与文件调取。<br>
+            • <strong>安全免公网</strong>：基于 WireGuard 端到端加密直连，免公网 IP，免端口转发。
+          </p>
+        </div>
 
-          <div class="form-row">
-            <div class="form-group">
-              <label for="se-process">进程特征名</label>
-              <input type="text" id="se-process" placeholder="例如: openlist 或 aria2c">
-            </div>
-            <div class="form-group">
-              <label for="se-port">监听端口 *</label>
-              <input type="number" id="se-port" placeholder="例如: 5244 或 8096" required>
-            </div>
-          </div>
+        <div class="ep-card">
+          <div class="ep-title-txt">⚡ 24/7 原生安全轻量 FTP 教程</div>
+          <p style="font-size:0.82em; color:var(--text-muted); line-height:1.5;">
+            • <strong>连接端口</strong>：<code>2121</code>（支持匿名免密登录）。<br>
+            • <strong>手机端</strong>：推荐使用 <strong>MT 管理器</strong> 侧边栏 FTP 客户端，全盘文件极速读写。<br>
+            • <strong>电脑端</strong>：推荐使用 FileZilla / WinSCP，输入手机局域网 IP 与端口 2121，选择匿名连接。
+          </p>
+        </div>
 
-          <div class="form-group">
-            <label for="se-detect">检测方式</label>
-            <select id="se-detect">
-              <option value="PROCESS_OR_PORT">进程存在 或 端口监听 (推荐)</option>
-              <option value="PROCESS_AND_PORT">进程存在 且 端口监听</option>
-              <option value="PORT">仅检测端口监听</option>
-              <option value="PROCESS">仅检测进程存在</option>
-            </select>
-          </div>
+        <div class="ep-card">
+          <div class="ep-title-txt">📁 SMB / Windows 网络邻居教程</div>
+          <p style="font-size:0.82em; color:var(--text-muted); line-height:1.5;">
+            • <strong>Windows 访问</strong>：在文件资源管理器地址栏直接输入 <code>\\[手机IP]\PocketNAS</code> 或 <code>\\[手机IP]</code>。<br>
+            • <strong>macOS 连接</strong>：访达按 <code>Cmd + K</code> 输入 <code>smb://[手机IP]/PocketNAS</code>，以“客人”身份连接。
+          </p>
+        </div>
 
-          <div class="form-group">
-            <div style="display:flex; align-items:center; gap:8px;">
-              <input type="checkbox" id="se-web-enabled" checked onchange="toggleWebUrlInput()">
-              <label for="se-web-enabled" style="margin:0; cursor:pointer;">具备 Web 网页访问界面</label>
-            </div>
-          </div>
-
-          <div class="form-group" id="se-web-url-group">
-            <label for="se-web-url">Web 访问地址 (支持 <code>{ip}</code> 动态占位符)</label>
-            <input type="text" id="se-web-url" placeholder="http://{ip}:5244">
-          </div>
-
-          <div class="form-group">
-            <label for="se-desc">服务说明 / 备注</label>
-            <input type="text" id="se-desc" placeholder="简要描述该服务用途">
-          </div>
-
-          <div class="form-actions">
-            <button type="button" class="btn-mini-copy" onclick="closeServiceEditModal()">取消</button>
-            <button type="submit" class="btn-device-copy" style="padding:6px 16px;">保存服务</button>
-          </div>
-        </form>
+        <div class="ep-card">
+          <div class="ep-title-txt">❓ 常见问题与排错指引 (FAQ)</div>
+          <p style="font-size:0.82em; color:var(--text-muted); line-height:1.5;">
+            <strong>Q: 电脑或电视为什么连不上手机的 NAS？</strong><br>
+            A: 请确保手机与电脑/电视处于同一 Wi-Fi 局域网（或均连接到同一个 Tailscale 虚拟局域网），且路由器未开启 AP 隔离。<br><br>
+            <strong>Q: 手机重新连接 Wi-Fi 后 IP 为什么改变？</strong><br>
+            A: 建议在路由器后台将手机的 MAC 地址绑定为静态 IP，或直接使用 Tailscale 分配的永久固定 IP。<br><br>
+            <strong>Q: 熄屏待机后服务会被系统杀死吗？</strong><br>
+            A: PocketNAS Pro 采用 Go 原生极低功耗守护进程，待机仅约 0.3W；请在手机系统电池设置中将 Root 管理器（KernelSU/Magisk）加入白名单。
+          </p>
+        </div>
       </div>
     </div>
   </div>
 
-  <div id="toast" class="toast-bubble">
-    <span>✅</span>
-    <span id="toast-text">已复制到剪贴板</span>
+  <!-- 自定义服务添加与详情弹窗 -->
+  <div class="hud-dialog-mask" id="modal-custom-service" onclick="closeModalOnMask(event, 'modal-custom-service')">
+    <div class="hud-dialog-card" style="max-width:480px;">
+      <div class="dialog-header">
+        <div class="dialog-title" id="cs-modal-title">添加自定义服务</div>
+        <button class="btn-hud-icon" onclick="closeCustomServiceModal()">✕</button>
+      </div>
+      <form id="form-custom-service" onsubmit="handleSaveCustomService(event)" style="padding:12px 14px; display:flex; flex-direction:column; gap:8px;">
+        <input type="hidden" id="cs-id" value="">
+        <div style="display:flex; flex-direction:column; gap:3px;">
+          <label style="font-size:0.8em; color:var(--text-muted);">服务显示名称 *</label>
+          <input type="text" id="cs-name" required placeholder="如: Web 终端 / 青龙面板" style="background:var(--bg-well); border:1px solid var(--border-line); padding:6px 8px; color:var(--text-pure); border-radius:4px; font-size:0.9em;">
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px;">
+          <div style="display:flex; flex-direction:column; gap:3px;">
+            <label style="font-size:0.8em; color:var(--text-muted);">目标进程名称</label>
+            <input type="text" id="cs-process" placeholder="如: ttyd / qinglong" style="background:var(--bg-well); border:1px solid var(--border-line); padding:6px 8px; color:var(--text-pure); border-radius:4px; font-size:0.9em;">
+          </div>
+          <div style="display:flex; flex-direction:column; gap:3px;">
+            <label style="font-size:0.8em; color:var(--text-muted);">监听端口 (TCP) *</label>
+            <input type="number" id="cs-port" required placeholder="如: 7681" style="background:var(--bg-well); border:1px solid var(--border-line); padding:6px 8px; color:var(--text-pure); border-radius:4px; font-size:0.9em;">
+          </div>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:3px;">
+          <label style="font-size:0.8em; color:var(--text-muted);">运行检测策略</label>
+          <select id="cs-detect" style="background:var(--bg-well); border:1px solid var(--border-line); padding:6px 8px; color:var(--text-pure); border-radius:4px; font-size:0.9em;">
+            <option value="PROCESS_OR_PORT">进程存在 或 端口监听 (推荐)</option>
+            <option value="PROCESS_AND_PORT">进程存在 且 端口监听</option>
+            <option value="PORT">仅检测端口监听</option>
+            <option value="PROCESS">仅检测进程存在</option>
+          </select>
+        </div>
+        <div style="display:flex; align-items:center; gap:6px; margin:2px 0;">
+          <input type="checkbox" id="cs-web" checked>
+          <label for="cs-web" style="font-size:0.85em; color:var(--text-pure); cursor:pointer;">开启 Web 网页快捷访问入口</label>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:3px;">
+          <label style="font-size:0.8em; color:var(--text-muted);">Web 访问地址模板 ({ip} 自动替换)</label>
+          <input type="text" id="cs-weburl" placeholder="http://{ip}:7681" style="background:var(--bg-well); border:1px solid var(--border-line); padding:6px 8px; color:var(--text-pure); border-radius:4px; font-size:0.9em;">
+        </div>
+        <div style="display:flex; flex-direction:column; gap:3px;">
+          <label style="font-size:0.8em; color:var(--text-muted);">服务描述 / 说明</label>
+          <input type="text" id="cs-desc" placeholder="简要说明" style="background:var(--bg-well); border:1px solid var(--border-line); padding:6px 8px; color:var(--text-pure); border-radius:4px; font-size:0.9em;">
+        </div>
+        <div style="display:flex; justify-content:flex-end; gap:6px; margin-top:6px;">
+          <button type="button" class="btn-hud" onclick="closeCustomServiceModal()">取消</button>
+          <button type="submit" class="btn-copy-action" style="padding:6px 14px;">保存服务</button>
+        </div>
+      </form>
+    </div>
   </div>
 
-  <script src="app.js?v=20260827_330"></script>
+  <!-- 自定义外网链接添加/编辑弹窗 -->
+  <div class="hud-dialog-mask" id="modal-custom-link" onclick="closeModalOnMask(event, 'modal-custom-link')">
+    <div class="hud-dialog-card" style="max-width:460px;">
+      <div class="dialog-header">
+        <div class="dialog-title" id="cl-modal-title">添加常用直达链接</div>
+        <button class="btn-hud-icon" onclick="closeCustomLinkModal()">✕</button>
+      </div>
+      <form id="form-custom-link" onsubmit="handleSaveCustomLink(event)" style="padding:12px 14px; display:flex; flex-direction:column; gap:8px;">
+        <input type="hidden" id="cl-id" value="">
+        <div style="display:grid; grid-template-columns:1fr 3fr; gap:6px;">
+          <div style="display:flex; flex-direction:column; gap:3px;">
+            <label style="font-size:0.8em; color:var(--text-muted);">图标 / Emoji</label>
+            <input type="text" id="cl-icon" value="🌐" style="text-align:center; background:var(--bg-well); border:1px solid var(--border-line); padding:6px 8px; color:var(--text-pure); border-radius:4px; font-size:1.1em;">
+          </div>
+          <div style="display:flex; flex-direction:column; gap:3px;">
+            <label style="font-size:0.8em; color:var(--text-muted);">链接名称 *</label>
+            <input type="text" id="cl-name" required placeholder="如: 青龙面板 / Qbittorrent" style="background:var(--bg-well); border:1px solid var(--border-line); padding:6px 8px; color:var(--text-pure); border-radius:4px; font-size:0.9em;">
+          </div>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:3px;">
+          <label style="font-size:0.8em; color:var(--text-muted);">访问链接 URL * (支持 {ts_ip} 自动替换)</label>
+          <input type="text" id="cl-url" required placeholder="http://{ts_ip}:5700 或 https://..." style="background:var(--bg-well); border:1px solid var(--border-line); padding:6px 8px; color:var(--text-pure); border-radius:4px; font-family:var(--font-mono); font-size:0.88em;">
+        </div>
+        <div style="display:flex; flex-direction:column; gap:3px;">
+          <label style="font-size:0.8em; color:var(--text-muted);">描述说明</label>
+          <input type="text" id="cl-desc" placeholder="简要说明用途" style="background:var(--bg-well); border:1px solid var(--border-line); padding:6px 8px; color:var(--text-pure); border-radius:4px; font-size:0.9em;">
+        </div>
+        <div style="display:flex; justify-content:flex-end; gap:6px; margin-top:6px;">
+          <button type="button" class="btn-hud" onclick="closeCustomLinkModal()">取消</button>
+          <button type="submit" class="btn-copy-action" style="padding:6px 14px;">保存链接</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 服务详情查看弹窗 -->
+  <div class="hud-dialog-mask" id="modal-service-detail" onclick="closeModalOnMask(event, 'modal-service-detail')">
+    <div class="hud-dialog-card" style="max-width:440px;">
+      <div class="dialog-header">
+        <div class="dialog-title" id="sd-title">服务详情</div>
+        <button class="btn-hud-icon" onclick="closeServiceDetailModal()">✕</button>
+      </div>
+      <div class="dialog-body" id="sd-content"></div>
+    </div>
+  </div>
+
+  <!-- Toast 提示胶囊 -->
+  <div class="hud-toast" id="toast">
+    <span id="toast-text">提示信息</span>
+  </div>
+
+  <script src="app.js?v=20260901_336"></script>
 </body>
 </html>

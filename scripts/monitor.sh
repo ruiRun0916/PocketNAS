@@ -1,14 +1,13 @@
 #!/system/bin/sh
-# PocketNAS Pro v3.5.0 - Ultra-Low Power Background Metrics Harvester
+# PocketNAS Pro v3.3.3 - Ultra-Low Power Background Metrics Harvester
 # 0-Redundant Fork, Single-Instance Lock, Cached Device Props, 3s Energy-Efficient Polling
 
 MODDIR=${0%/*}/..
 [ -d "$MODDIR" ] || MODDIR="/data/adb/modules/pocket_nas"
-
 OUT_DIR="/data/local/tmp/nas"
+
 mkdir -p "$OUT_DIR" 2>/dev/null
 mkdir -p "$MODDIR/web/api" 2>/dev/null
-
 PID_FILE="/data/local/tmp/nas/monitor.pid"
 MY_PID=$$
 
@@ -64,9 +63,8 @@ CPU_MODEL=$(get_cpu_model)
 ANDROID_VER="Android $(getprop ro.build.version.release 2>/dev/null || echo '14')"
 KERNEL_VER=$(uname -r 2>/dev/null || echo "Linux 5.4")
 SELINUX_STATUS=$(getenforce 2>/dev/null || echo "Enforcing")
-
 STORAGE_TARGET="/data/media/0"
-REFRESH=3 # 优化为 3 秒轻量采样，待机功耗降低 80%
+REFRESH=3  # 优化为 3 秒轻量采样，待机功耗降低 80%
 
 prev_total_time=0
 prev_idle_time=0
@@ -76,10 +74,7 @@ prev_uptime_sec=0
 
 format_bytes() {
     local b=$1
-    if [ -z "$b" ] || [ "$b" -le 0 ] 2>/dev/null; then
-        echo "0 B/s"
-        return
-    fi
+    if [ -z "$b" ] || [ "$b" -le 0 ] 2>/dev/null; then echo "0 B/s"; return; fi
     if [ "$b" -ge 1073741824 ] 2>/dev/null; then
         local gb=$((b / 1073741824))
         local dec=$(( (b % 1073741824) * 10 / 1073741824 ))
@@ -98,10 +93,7 @@ format_bytes() {
 
 format_traffic() {
     local b=$1
-    if [ -z "$b" ] || [ "$b" -le 0 ] 2>/dev/null; then
-        echo "0 KB"
-        return
-    fi
+    if [ -z "$b" ] || [ "$b" -le 0 ] 2>/dev/null; then echo "0 KB"; return; fi
     if [ "$b" -ge 1073741824 ] 2>/dev/null; then
         local gb=$((b / 1073741824))
         local dec=$(( (b % 1073741824) * 10 / 1073741824 ))
@@ -118,10 +110,7 @@ format_traffic() {
 
 format_kb_to_gb() {
     local kb=$1
-    if [ -z "$kb" ] || [ "$kb" -le 0 ] 2>/dev/null; then
-        echo "--"
-        return
-    fi
+    if [ -z "$kb" ] || [ "$kb" -le 0 ] 2>/dev/null; then echo "--"; return; fi
     local gb=$((kb / 1048576))
     local dec=$(( (kb % 1048576) * 10 / 1048576 ))
     echo "${gb}.${dec} GB"
@@ -201,7 +190,6 @@ while true; do
         [ $mem_used_kb -lt 0 ] && mem_used_kb=0
         mem_percent=$((mem_used_kb * 100 / mem_total_kb))
     fi
-
     mem_total_fmt=$(format_kb_to_gb $mem_total_kb)
     mem_used_fmt=$(format_kb_to_gb $mem_used_kb)
     mem_free_fmt=$(format_kb_to_gb $mem_avail_kb)
@@ -220,7 +208,7 @@ while true; do
         swap_fmt="未开启"
     fi
 
-    # 3. 存储容量 (每 30 秒执行一次 df，避免每秒扫描磁盘)
+    # 3. 存储容量 (每 30 秒执行一次 df，避免高频扫描磁盘)
     if [ $((loop_count % 10)) -eq 0 ]; then
         df_data=$(df -kP "$STORAGE_TARGET" 2>/dev/null | tail -n 1)
         st_total_kb=$(echo "$df_data" | awk '{print $2}' | tr -dc '0-9')
@@ -331,12 +319,11 @@ while true; do
     prev_tx=$cur_tx
     prev_uptime_sec=$uptime_raw
 
-    # 7. 协议雷达
-    has_webui="false"; has_alist="false"; has_ftp="false"; has_ssh="false"
+    # 7. 协议雷达 (已移除 SSH)
+    has_webui="false"; has_alist="false"; has_ftp="false"
     grep -qi ":1F90 " /proc/net/tcp 2>/dev/null && has_webui="true"
     grep -qi ":147C " /proc/net/tcp 2>/dev/null && has_alist="true"
     grep -qi ":0849 \|:0015 " /proc/net/tcp 2>/dev/null && has_ftp="true"
-    grep -qi ":0016 \|:1F56 " /proc/net/tcp 2>/dev/null && has_ssh="true"
 
     # 8. 电池状态
     bat_level=$(cat /sys/class/power_supply/battery/capacity 2>/dev/null || echo "")
@@ -405,7 +392,7 @@ while true; do
     "alist": { "name": "AList / OpenList", "port": 5244, "status": ${has_alist}, "url": "http://${ip_addr}:5244" },
     "webdav": { "name": "WebDAV 挂载协议", "port": 5244, "status": ${has_alist}, "url": "http://${ip_addr}:5244/dav" },
     "ftp": { "name": "FTP 文件传输", "port": 2121, "status": ${has_ftp}, "url": "ftp://${ip_addr}:2121" },
-    "ssh": { "name": "SSH / SFTP 终端", "port": 22, "status": ${has_ssh}, "url": "ssh root@${ip_addr} -p 22" }
+    "fsend": { "name": "文件闪传", "port": 2333, "status": true, "url": "http://${ip_addr}:2333" }
   },
   "battery": {
     "level": "${bat_level}",

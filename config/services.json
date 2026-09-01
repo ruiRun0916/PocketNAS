@@ -43,20 +43,20 @@
     "port": 445,
     "detect": "PORT",
     "web": false,
-    "web_url": "\\\\{ip}\\PocketNAS",
+    "web_url": "\\{ip}\PocketNAS",
     "description": "Windows 网络邻居与通用局域网 SMB 共享",
     "enabled": true
   },
   {
-    "id": "ssh",
-    "name": "SSH / SFTP 终端",
+    "id": "fsend",
+    "name": "文件闪传 · FastSend",
     "builtin": true,
-    "process": "sshd",
-    "port": 22,
+    "process": "fsend",
+    "port": 2333,
     "detect": "PORT",
-    "web": false,
-    "web_url": "ssh root@{ip} -p 22",
-    "description": "Android Root Shell 远程加密运维与终端交互",
+    "web": true,
+    "web_url": "http://{ip}:2333",
+    "description": "局域网极速相册与视频互传 (需 App 常驻)",
     "enabled": true
   }
 ]

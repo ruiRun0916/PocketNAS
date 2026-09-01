@@ -13,7 +13,7 @@ import (
 )
 
 // =========================================================
-// PocketNAS Pro v3.3.1 - Unified Universal Service Monitor
+// PocketNAS Pro v3.3.3 - Unified Universal Service Monitor
 // Pure Go · Zero-Fork Process & Port Telemetry · Dynamic CRUD
 // =========================================================
 
@@ -91,13 +91,13 @@ func (sm *ServiceMonitor) loadConfigLocked() {
 		}
 	}
 
-	// 默认内置服务
+	// 默认内置服务 (已彻底移除 SSH 项目)
 	sm.services = []ServiceDefinition{
 		{ID: "alist", Name: "AList / OpenList", Builtin: true, Process: "droid.alistlite", Port: 5244, Detect: "PROCESS_OR_PORT", Web: true, WebURL: "http://{ip}:5244", Description: "多网盘聚合与本地文件在线音视频预览", Enabled: true},
 		{ID: "webdav", Name: "WebDAV 挂载服务", Builtin: true, Process: "droid.alistlite", Port: 5244, Detect: "PORT", Web: true, WebURL: "http://{ip}:5244/dav", Description: "Mac 访达 / Win 磁盘映射 / 电视 4K 播放协议", Enabled: true},
 		{ID: "ftp", Name: "原生安全 FTP", Builtin: true, Process: "nas_server", Port: 2121, Detect: "PROCESS_OR_PORT", Web: false, WebURL: "ftp://{ip}:2121", Description: "24/7 局域网高速免密文件传输与全盘读写", Enabled: true},
 		{ID: "smb", Name: "Samba / SMB 共享", Builtin: true, Process: "smbd0", Port: 445, Detect: "PORT", Web: false, WebURL: "\\\\{ip}\\PocketNAS", Description: "Windows 网络邻居与通用局域网 SMB 共享", Enabled: true},
-		{ID: "ssh", Name: "SSH / SFTP 终端", Builtin: true, Process: "sshd", Port: 22, Detect: "PORT", Web: false, WebURL: "ssh root@{ip} -p 22", Description: "Android Root Shell 远程加密运维与终端交互", Enabled: true},
+		{ID: "fsend", Name: "文件闪传 · FastSend", Builtin: true, Process: "fsend", Port: 2333, Detect: "PORT", Web: true, WebURL: "http://{ip}:2333", Description: "局域网极速相册与视频互传 (需 App 常驻)", Enabled: true},
 	}
 	sm.saveConfigLocked()
 }

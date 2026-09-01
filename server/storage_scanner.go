@@ -12,17 +12,18 @@ import (
 )
 
 // =========================================================
-// PocketNAS Pro v3.3.2 - Intelligent Storage Category Scanner
+// PocketNAS Pro v3.3.3 - Intelligent Storage Category Scanner
 // Low-Power Async File-Tree Walk · In-Memory Caching · 0-Fork
 // =========================================================
 
 type CategoryStatItem struct {
 	ID         string  `json:"id"`          // "app", "image", "audio", "video", "apk", "doc", "archive", "other"
-	Name       string  `json:"name"`        // "应用和数据", "图片", "音频", "视频", "安装包", "文档", "压缩包", "其他文件"
+	Name       string  `json:"name"`        // "应用和数据", "图片相册", "音乐音频", "视频媒体", "安装包 (APK)", "文档书籍", "压缩归档", "系统数据 / 其他"
 	Color      string  `json:"color"`       // "#f59e0b", "#f97316", "#ef4444", "#a855f7", "#3b82f6", "#10b981", "#06b6d4", "#64748b"
 	SizeBytes  uint64  `json:"size_bytes"`  // 字节数
 	SizeFormat string  `json:"size_format"` // "28.43 GB"
-	Percent    float64 `json:"percent"`     // 占比百分比 0.0 ~ 100.0
+	Percent    float64 `json:"percent"`     // 占总磁盘容量百分比 0.0 ~ 100.0
+	UsedPercent float64 `json:"used_percent"` // 占已用空间百分比 0.0 ~ 100.0
 	FileCount  int     `json:"file_count"`  // 文件数
 }
 
@@ -30,19 +31,21 @@ type StorageDetailSnapshot struct {
 	TotalUsedBytes  uint64             `json:"total_used_bytes"`
 	TotalFreeBytes  uint64             `json:"total_free_bytes"`
 	TotalSizeBytes  uint64             `json:"total_size_bytes"`
-	TotalUsedFormat string             `json:"total_used_format"` // "435.40 GB"
-	TotalFreeFormat string             `json:"total_free_format"` // "92.60 GB"
-	TotalSizeFormat string             `json:"total_size_format"` // "528.00 GB"
-	LastScanTime    string             `json:"last_scan_time"`    // "2026-08-26 11:00:00"
+	TotalUsedFormat string             `json:"total_used_format"` // "397.51 GB"
+	TotalFreeFormat string             `json:"total_free_format"` // "66.12 GB"
+	TotalSizeFormat string             `json:"total_size_format"` // "463.63 GB"
+	UsedPercent     float64            `json:"used_percent"`      // 85.74%
+	FreePercent     float64            `json:"free_percent"`      // 14.26%
+	LastScanTime    string             `json:"last_scan_time"`    // "2026-08-30 09:16:03"
 	IsScanning      bool               `json:"is_scanning"`       // 是否正在扫描
 	Categories      []CategoryStatItem `json:"categories"`
 }
 
 type StorageScanner struct {
-	mu         sync.RWMutex
-	rootPath   string
-	snapshot   StorageDetailSnapshot
-	scanning   bool
+	mu          sync.RWMutex
+	rootPath    string
+	snapshot    StorageDetailSnapshot
+	scanning    bool
 	scanTrigger chan struct{}
 }
 
@@ -118,20 +121,19 @@ func (ss *StorageScanner) Init(rootPath string) {
 	}
 	ss.mu.Unlock()
 
-	// 启动后台超低频轮询与按需触发循环
 	go ss.backgroundWorker()
 }
 
 func makeDefaultCategories() []CategoryStatItem {
 	return []CategoryStatItem{
-		{ID: "app", Name: "应用和数据", Color: "#f59e0b", SizeBytes: 0, SizeFormat: "0 B", Percent: 0, FileCount: 0},
-		{ID: "image", Name: "图片", Color: "#f97316", SizeBytes: 0, SizeFormat: "0 B", Percent: 0, FileCount: 0},
-		{ID: "audio", Name: "音频", Color: "#ef4444", SizeBytes: 0, SizeFormat: "0 B", Percent: 0, FileCount: 0},
-		{ID: "video", Name: "视频", Color: "#a855f7", SizeBytes: 0, SizeFormat: "0 B", Percent: 0, FileCount: 0},
-		{ID: "apk", Name: "安装包", Color: "#3b82f6", SizeBytes: 0, SizeFormat: "0 B", Percent: 0, FileCount: 0},
-		{ID: "doc", Name: "文档", Color: "#10b981", SizeBytes: 0, SizeFormat: "0 B", Percent: 0, FileCount: 0},
-		{ID: "archive", Name: "压缩包", Color: "#06b6d4", SizeBytes: 0, SizeFormat: "0 B", Percent: 0, FileCount: 0},
-		{ID: "other", Name: "其他文件", Color: "#64748b", SizeBytes: 0, SizeFormat: "0 B", Percent: 0, FileCount: 0},
+		{ID: "app", Name: "应用和数据", Color: "#f59e0b", SizeBytes: 0, SizeFormat: "0 B", Percent: 0, UsedPercent: 0, FileCount: 0},
+		{ID: "image", Name: "图片相册", Color: "#f97316", SizeBytes: 0, SizeFormat: "0 B", Percent: 0, UsedPercent: 0, FileCount: 0},
+		{ID: "audio", Name: "音乐音频", Color: "#ef4444", SizeBytes: 0, SizeFormat: "0 B", Percent: 0, UsedPercent: 0, FileCount: 0},
+		{ID: "video", Name: "视频媒体", Color: "#a855f7", SizeBytes: 0, SizeFormat: "0 B", Percent: 0, UsedPercent: 0, FileCount: 0},
+		{ID: "apk", Name: "安装包 (APK)", Color: "#3b82f6", SizeBytes: 0, SizeFormat: "0 B", Percent: 0, UsedPercent: 0, FileCount: 0},
+		{ID: "doc", Name: "文档书籍", Color: "#10b981", SizeBytes: 0, SizeFormat: "0 B", Percent: 0, UsedPercent: 0, FileCount: 0},
+		{ID: "archive", Name: "压缩归档", Color: "#06b6d4", SizeBytes: 0, SizeFormat: "0 B", Percent: 0, UsedPercent: 0, FileCount: 0},
+		{ID: "other", Name: "系统数据 / 其他", Color: "#64748b", SizeBytes: 0, SizeFormat: "0 B", Percent: 0, UsedPercent: 0, FileCount: 0},
 	}
 }
 
@@ -158,8 +160,7 @@ func (ss *StorageScanner) GetSnapshot() StorageDetailSnapshot {
 }
 
 func (ss *StorageScanner) backgroundWorker() {
-	// 启动后延时 15 秒再执行首次扫描，避免开机拥堵
-	time.Sleep(15 * time.Second)
+	time.Sleep(10 * time.Second)
 	ss.performScan()
 
 	ticker := time.NewTicker(30 * time.Minute)
@@ -219,15 +220,10 @@ func (ss *StorageScanner) performScan() {
 
 		walkCount++
 		if walkCount%500 == 0 {
-			runtime.Gosched() // 让出 CPU，杜绝锁频
+			runtime.Gosched() // 让出 CPU 时间片
 		}
 
 		if d.IsDir() {
-			// 如果是 Android 应用私有数据目录，整体累加
-			if path == androidDirPrefix {
-				// Android 目录内部单独快速计算或继续遍历
-				return nil
-			}
 			return nil
 		}
 
@@ -276,28 +272,39 @@ func (ss *StorageScanner) performScan() {
 	// 计算其他未归类部分与总已用空间对比
 	classifiedSum := appSize + imgSize + audSize + vidSize + apkSize + docSize + archSize + othSize
 	if usedBytes > classifiedSum {
-		// 剩余的系统其他占用 (如数据库、未直接挂载的系统块)
 		othSize += (usedBytes - classifiedSum)
 	}
 
 	// 4. 计算百分比
-	calcPct := func(sz uint64) float64 {
+	calcTotalPct := func(sz uint64) float64 {
 		if totalBytes == 0 {
 			return 0
 		}
-		p := float64(sz) * 100.0 / float64(totalBytes)
-		return p
+		return float64(sz) * 100.0 / float64(totalBytes)
+	}
+
+	calcUsedPct := func(sz uint64) float64 {
+		if usedBytes == 0 {
+			return 0
+		}
+		return float64(sz) * 100.0 / float64(usedBytes)
+	}
+
+	var usedPct, freePct float64
+	if totalBytes > 0 {
+		usedPct = float64(usedBytes) * 100.0 / float64(totalBytes)
+		freePct = float64(freeBytes) * 100.0 / float64(totalBytes)
 	}
 
 	categories := []CategoryStatItem{
-		{ID: "app", Name: "应用和数据", Color: "#f59e0b", SizeBytes: appSize, SizeFormat: formatFileSize(appSize), Percent: calcPct(appSize), FileCount: appCount},
-		{ID: "image", Name: "图片", Color: "#f97316", SizeBytes: imgSize, SizeFormat: formatFileSize(imgSize), Percent: calcPct(imgSize), FileCount: imgCount},
-		{ID: "audio", Name: "音频", Color: "#ef4444", SizeBytes: audSize, SizeFormat: formatFileSize(audSize), Percent: calcPct(audSize), FileCount: audCount},
-		{ID: "video", Name: "视频", Color: "#a855f7", SizeBytes: vidSize, SizeFormat: formatFileSize(vidSize), Percent: calcPct(vidSize), FileCount: vidCount},
-		{ID: "apk", Name: "安装包", Color: "#3b82f6", SizeBytes: apkSize, SizeFormat: formatFileSize(apkSize), Percent: calcPct(apkSize), FileCount: apkCount},
-		{ID: "doc", Name: "文档", Color: "#10b981", SizeBytes: docSize, SizeFormat: formatFileSize(docSize), Percent: calcPct(docSize), FileCount: docCount},
-		{ID: "archive", Name: "压缩包", Color: "#06b6d4", SizeBytes: archSize, SizeFormat: formatFileSize(archSize), Percent: calcPct(archSize), FileCount: archCount},
-		{ID: "other", Name: "其他文件", Color: "#64748b", SizeBytes: othSize, SizeFormat: formatFileSize(othSize), Percent: calcPct(othSize), FileCount: othCount},
+		{ID: "app", Name: "应用和数据", Color: "#f59e0b", SizeBytes: appSize, SizeFormat: formatFileSize(appSize), Percent: calcTotalPct(appSize), UsedPercent: calcUsedPct(appSize), FileCount: appCount},
+		{ID: "image", Name: "图片相册", Color: "#f97316", SizeBytes: imgSize, SizeFormat: formatFileSize(imgSize), Percent: calcTotalPct(imgSize), UsedPercent: calcUsedPct(imgSize), FileCount: imgCount},
+		{ID: "audio", Name: "音乐音频", Color: "#ef4444", SizeBytes: audSize, SizeFormat: formatFileSize(audSize), Percent: calcTotalPct(audSize), UsedPercent: calcUsedPct(audSize), FileCount: audCount},
+		{ID: "video", Name: "视频媒体", Color: "#a855f7", SizeBytes: vidSize, SizeFormat: formatFileSize(vidSize), Percent: calcTotalPct(vidSize), UsedPercent: calcUsedPct(vidSize), FileCount: vidCount},
+		{ID: "apk", Name: "安装包 (APK)", Color: "#3b82f6", SizeBytes: apkSize, SizeFormat: formatFileSize(apkSize), Percent: calcTotalPct(apkSize), UsedPercent: calcUsedPct(apkSize), FileCount: apkCount},
+		{ID: "doc", Name: "文档书籍", Color: "#10b981", SizeBytes: docSize, SizeFormat: formatFileSize(docSize), Percent: calcTotalPct(docSize), UsedPercent: calcUsedPct(docSize), FileCount: docCount},
+		{ID: "archive", Name: "压缩归档", Color: "#06b6d4", SizeBytes: archSize, SizeFormat: formatFileSize(archSize), Percent: calcTotalPct(archSize), UsedPercent: calcUsedPct(archSize), FileCount: archCount},
+		{ID: "other", Name: "系统数据 / 其他", Color: "#64748b", SizeBytes: othSize, SizeFormat: formatFileSize(othSize), Percent: calcTotalPct(othSize), UsedPercent: calcUsedPct(othSize), FileCount: othCount},
 	}
 
 	ss.mu.Lock()
@@ -308,6 +315,8 @@ func (ss *StorageScanner) performScan() {
 		TotalUsedFormat: formatFileSize(usedBytes),
 		TotalFreeFormat: formatFileSize(freeBytes),
 		TotalSizeFormat: formatFileSize(totalBytes),
+		UsedPercent:     usedPct,
+		FreePercent:     freePct,
 		LastScanTime:    time.Now().Format("2006-01-02 15:04:05"),
 		IsScanning:      false,
 		Categories:      categories,

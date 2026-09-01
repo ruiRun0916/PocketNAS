@@ -5,5 +5,78 @@
   "refresh_seconds": 2,
   "storage_path": "/data/media/0",
   "network_interface": "wlan0",
-  "alist_port": 5244
+  "alist_port": 5244,
+  "ui": {
+    "font_scale": "standard",
+    "motion": "light",
+    "navigation": {
+      "order": [
+        "overview",
+        "storage",
+        "network",
+        "services",
+        "alist",
+        "fsend",
+        "speedtest",
+        "tailscale"
+      ],
+      "visible": {
+        "overview": true,
+        "storage": true,
+        "network": true,
+        "services": true,
+        "alist": true,
+        "fsend": true,
+        "speedtest": true,
+        "tailscale": true
+      }
+    },
+    "services": {
+      "order": [
+        "alist",
+        "webdav",
+        "ftp",
+        "smb",
+        "fsend"
+      ],
+      "visible": {
+        "alist": true,
+        "webdav": true,
+        "ftp": true,
+        "smb": true,
+        "fsend": true
+      }
+    },
+    "embedding": {
+      "alist": true,
+      "fsend": true
+    },
+    "tailscale": {
+      "ip": "",
+      "magic_dns": "",
+      "custom_links": [
+        {
+          "id": "link_ts_webdav",
+          "name": "Tailscale 远程 WebDAV",
+          "url": "http://{ts_ip}:5244/dav",
+          "icon": "📺",
+          "desc": "异地远程挂载 4K 原画免解压播放"
+        },
+        {
+          "id": "link_ts_webui",
+          "name": "Tailscale 远程控制台",
+          "url": "http://{ts_ip}:8080",
+          "icon": "🌐",
+          "desc": "异地全功能遥测与运维控制"
+        },
+        {
+          "id": "link_ts_admin",
+          "name": "Tailscale 管理后台",
+          "url": "https://login.tailscale.com/admin/machines",
+          "icon": "🛡️",
+          "desc": "设备在线状态与子网路由管理"
+        }
+      ]
+    }
+  }
 }

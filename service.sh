@@ -1,5 +1,5 @@
 #!/system/bin/sh
-# PocketNAS Pro v3.2.2 - Ultra-Low Power Go Daemon Manager
+# PocketNAS Pro v3.3.4 - Ultra-Low Power Go Daemon Manager
 # Clean Port Cleanup, Single Go Binary Execution (0-Fork, 0-Disk I/O)
 
 MODDIR=${0%/*}

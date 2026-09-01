@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"encoding/json"
 	"errors"
+	"flag"
 	"fmt"
 	"io"
 	"log"
@@ -18,18 +19,53 @@ import (
 	"time"
 )
 
-// =========================================================
-// PocketNAS Pro v3.3.1 - Universal Android Hardware & NAS Daemon
-// Pure Go · Zero-Fork In-Memory Metrics · Unified Service Center
-// =========================================================
+type CustomLink struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+	URL  string `json:"url"`
+	Icon string `json:"icon"`
+	Desc string `json:"desc"`
+}
+
+type TailscaleConfig struct {
+	IP          string       `json:"ip"`
+	MagicDNS    string       `json:"magic_dns"`
+	CustomLinks []CustomLink `json:"custom_links"`
+}
+
+type NavigationConfig struct {
+	Order   []string        `json:"order"`
+	Visible map[string]bool `json:"visible"`
+}
+
+type ServicesUIConfig struct {
+	Order   []string        `json:"order"`
+	Visible map[string]bool `json:"visible"`
+}
+
+type EmbeddingConfig struct {
+	Alist bool `json:"alist"`
+	Fsend bool `json:"fsend"`
+}
+
+type UIConfig struct {
+	FontScale  string           `json:"font_scale"`
+	Motion     string           `json:"motion"`
+	Navigation NavigationConfig `json:"navigation"`
+	Services   ServicesUIConfig `json:"services"`
+	Embedding  EmbeddingConfig  `json:"embedding"`
+	Tailscale  TailscaleConfig  `json:"tailscale"`
+}
 
 type Config struct {
-	Port           int    `json:"port"`
-	FtpPort        int    `json:"ftp_port"`
-	RefreshSeconds int    `json:"refresh_seconds"`
-	AppName        string `json:"app_name"`
-	StoragePath    string `json:"storage_path"`
-	AlistPort      int    `json:"alist_port"`
+	AppName          string   `json:"app_name"`
+	Port             int      `json:"port"`
+	FtpPort          int      `json:"ftp_port"`
+	RefreshSeconds   int      `json:"refresh_seconds"`
+	StoragePath      string   `json:"storage_path"`
+	NetworkInterface string   `json:"network_interface"`
+	AlistPort        int      `json:"alist_port"`
+	UI               UIConfig `json:"ui"`
 }
 
 type StorageInfo struct {
@@ -51,14 +87,14 @@ type MemoryInfo struct {
 }
 
 type CPUInfo struct {
-	Vendor     string            `json:"vendor"`
-	Model      string            `json:"model"`
-	ProcessNM  int               `json:"process_nm"`
-	Cores      int               `json:"cores"`
-	Governor   string            `json:"governor"`
-	Usage      int               `json:"usage"`
-	GPUModel   string            `json:"gpu_model"`
-	Clusters   []DetectedCluster `json:"clusters"`
+	Vendor    string            `json:"vendor"`
+	Model     string            `json:"model"`
+	ProcessNM int               `json:"process_nm"`
+	Cores     int               `json:"cores"`
+	Governor  string            `json:"governor"`
+	Usage     int               `json:"usage"`
+	GPUModel  string            `json:"gpu_model"`
+	Clusters  []DetectedCluster `json:"clusters"`
 }
 
 type TempInfo struct {
@@ -106,6 +142,7 @@ type StatusSnapshot struct {
 	Uptime            string                    `json:"uptime"`
 	LoadAvg           string                    `json:"loadavg"`
 	Tasks             string                    `json:"tasks"`
+	RefreshSeconds    int                       `json:"refresh_seconds"`
 	Storage           StorageInfo               `json:"storage"`
 	StorageCategories StorageDetailSnapshot     `json:"storage_categories"`
 	Memory            MemoryInfo                `json:"memory"`
@@ -119,14 +156,16 @@ type StatusSnapshot struct {
 }
 
 var (
-	currentSnapshot StatusSnapshot
-	snapshotMu      sync.RWMutex
-	baseDir         string
-	serverConfig    Config
-	stMutex         sync.Mutex
-	stRunning       bool
-	stActiveTime    time.Time
-	maxUploadBody   int64 = 512 * 1024 * 1024 // 512MB
+	currentSnapshot  StatusSnapshot
+	snapshotMu       sync.RWMutex
+	baseDir          string
+	serverConfig     Config
+	actualConfigPath string
+	configMu         sync.RWMutex
+	stMutex          sync.Mutex
+	stRunning        bool
+	stActiveTime     time.Time
+	maxUploadBody    int64 = 512 * 1024 * 1024
 )
 
 func getExecutableDir() string {
@@ -137,27 +176,86 @@ func getExecutableDir() string {
 	return filepath.Dir(exe)
 }
 
-func loadConfig(bDir string) Config {
+func defaultUIConfig() UIConfig {
+	return UIConfig{
+		FontScale: "standard",
+		Motion:    "light",
+		Navigation: NavigationConfig{
+			Order:   []string{"overview", "storage", "network", "services", "alist", "fsend", "speedtest", "tailscale"},
+			Visible: map[string]bool{"overview": true, "storage": true, "network": true, "services": true, "alist": true, "fsend": true, "speedtest": true, "tailscale": true},
+		},
+		Services: ServicesUIConfig{
+			Order:   []string{"alist", "webdav", "ftp", "smb", "fsend"},
+			Visible: map[string]bool{"alist": true, "webdav": true, "ftp": true, "smb": true, "fsend": true},
+		},
+		Embedding: EmbeddingConfig{Alist: true, Fsend: true},
+		Tailscale: TailscaleConfig{
+			IP: "",
+			CustomLinks: []CustomLink{
+				{ID: "link_ts_webdav", Name: "Tailscale 远程 WebDAV", URL: "http://{ts_ip}:5244/dav", Icon: "📺", Desc: "异地远程挂载 4K 原画免解压播放"},
+				{ID: "link_ts_webui", Name: "Tailscale 远程控制台", URL: "http://{ts_ip}:8080", Icon: "🌐", Desc: "异地全功能遥测与运维控制"},
+				{ID: "link_ts_admin", Name: "Tailscale 管理后台", URL: "https://login.tailscale.com/admin/machines", Icon: "🛡️", Desc: "设备在线状态与子网路由管理"},
+			},
+		},
+	}
+}
+
+func loadConfig(bDir string, explicitConfigPath string) (Config, string) {
 	cfg := Config{
-		Port:           8080,
-		FtpPort:        2121,
-		RefreshSeconds: 2,
-		AppName:        "PocketNAS Pro",
-		StoragePath:    "/data/media/0",
-		AlistPort:      5244,
+		AppName:          "PocketNAS Pro",
+		Port:             8080,
+		FtpPort:          2121,
+		RefreshSeconds:   2,
+		StoragePath:      "/data/media/0",
+		NetworkInterface: "wlan0",
+		AlistPort:        5244,
+		UI:               defaultUIConfig(),
 	}
 
-	confPaths := []string{
+	cwd, _ := os.Getwd()
+	var candidatePaths []string
+	if explicitConfigPath != "" {
+		candidatePaths = append(candidatePaths, explicitConfigPath)
+	}
+
+	candidatePaths = append(candidatePaths,
+		filepath.Join(bDir, "config/config.json"),
+		filepath.Join(cwd, "config/config.json"),
 		filepath.Join(bDir, "../config/config.json"),
+		filepath.Join(cwd, "../config/config.json"),
 		filepath.Join(bDir, "config.json"),
+		filepath.Join(cwd, "config.json"),
 		"/data/adb/modules/pocket_nas/config/config.json",
+		"/data/local/tmp/nas/config/config.json",
+	)
+
+	resolvedPath := ""
+	for _, p := range candidatePaths {
+		if p == "" {
+			continue
+		}
+		cleanP := filepath.Clean(p)
+		if fi, err := os.Stat(cleanP); err == nil && !fi.IsDir() {
+			if data, err := os.ReadFile(cleanP); err == nil {
+				if err := json.Unmarshal(data, &cfg); err == nil {
+					resolvedPath = cleanP
+					break
+				}
+			}
+		}
 	}
 
-	for _, p := range confPaths {
-		if data, err := os.ReadFile(p); err == nil {
-			_ = json.Unmarshal(data, &cfg)
-			break
-		}
+	if cfg.UI.FontScale == "" {
+		cfg.UI.FontScale = "standard"
+	}
+	if cfg.UI.Motion == "" {
+		cfg.UI.Motion = "light"
+	}
+	if len(cfg.UI.Navigation.Order) == 0 {
+		cfg.UI.Navigation = defaultUIConfig().Navigation
+	}
+	if len(cfg.UI.Services.Order) == 0 {
+		cfg.UI.Services = defaultUIConfig().Services
 	}
 
 	if _, err := os.Stat(cfg.StoragePath); err != nil {
@@ -170,7 +268,56 @@ func loadConfig(bDir string) Config {
 		}
 	}
 
-	return cfg
+	return cfg, resolvedPath
+}
+
+func saveUIConfigLocked(newUI UIConfig) error {
+	serverConfig.UI = newUI
+
+	if actualConfigPath == "" {
+		cwd, _ := os.Getwd()
+		actualConfigPath = filepath.Join(bDirOrCwd(baseDir, cwd), "config/config.json")
+	}
+
+	_ = os.MkdirAll(filepath.Dir(actualConfigPath), 0755)
+
+	diskMap := make(map[string]interface{})
+	if data, err := os.ReadFile(actualConfigPath); err == nil {
+		_ = json.Unmarshal(data, &diskMap)
+	}
+
+	diskMap["app_name"] = serverConfig.AppName
+	diskMap["port"] = serverConfig.Port
+	diskMap["ftp_port"] = serverConfig.FtpPort
+	diskMap["refresh_seconds"] = serverConfig.RefreshSeconds
+	diskMap["storage_path"] = serverConfig.StoragePath
+	diskMap["network_interface"] = serverConfig.NetworkInterface
+	diskMap["alist_port"] = serverConfig.AlistPort
+	diskMap["ui"] = serverConfig.UI
+
+	data, err := json.MarshalIndent(diskMap, "", "  ")
+	if err != nil {
+		return err
+	}
+
+	tmpFile := actualConfigPath + ".tmp"
+	if err := os.WriteFile(tmpFile, data, 0644); err != nil {
+		return err
+	}
+	return os.Rename(tmpFile, actualConfigPath)
+}
+
+func bDirOrCwd(bDir, cwd string) string {
+	if fi, err := os.Stat(filepath.Join(bDir, "config")); err == nil && fi.IsDir() {
+		return bDir
+	}
+	if fi, err := os.Stat(filepath.Join(bDir, "../config")); err == nil && fi.IsDir() {
+		return filepath.Join(bDir, "..")
+	}
+	if cwd != "" {
+		return cwd
+	}
+	return bDir
 }
 
 func formatBytesRate(b uint64) string {
@@ -256,10 +403,6 @@ func getPhysicalLANIP() (net.IP, string) {
 	return net.ParseIP("127.0.0.1"), "lo"
 }
 
-// =========================================================
-// 🚀 进程内零 Fork 状态采集引擎
-// =========================================================
-
 func startMetricsCollector(storagePath string) {
 	snapshotMu.Lock()
 	currentSnapshot.Device = DeviceInfo{
@@ -273,6 +416,7 @@ func startMetricsCollector(storagePath string) {
 	currentSnapshot.System = GlobalHardwareInfo.AndroidVersion
 	currentSnapshot.Kernel = GlobalHardwareInfo.KernelVersion
 	currentSnapshot.SELinux = "Enforcing"
+	currentSnapshot.RefreshSeconds = serverConfig.RefreshSeconds
 	currentSnapshot.CPU = CPUInfo{
 		Vendor:    GlobalHardwareInfo.SoCVendor,
 		Model:     GlobalHardwareInfo.SoCModel,
@@ -304,7 +448,6 @@ func startMetricsCollector(storagePath string) {
 				elapsed = 1.0
 			}
 
-			// 1. 单次扫描 /proc/stat：同时计算 CPU 总利用率与各核心利用率 (0 额外开销)
 			var curTotalUsage int
 			perCoreUsage := make(map[int]int)
 
@@ -360,10 +503,8 @@ func startMetricsCollector(storagePath string) {
 				file.Close()
 			}
 
-			// 依据单次扫描得到的核心利用率，计算各核心簇的平均利用率
 			liveClusters := CalculateClusterUsages(GlobalHardwareInfo.Clusters, perCoreUsage)
 
-			// 2. 网络吞吐计算 (每秒)
 			var curRx, curTx uint64
 			var netIf string = "wlan0"
 			if file, err := os.Open("/proc/net/dev"); err == nil {
@@ -373,7 +514,7 @@ func startMetricsCollector(storagePath string) {
 					if strings.Contains(line, ":") {
 						parts := strings.SplitN(line, ":", 2)
 						iface := strings.TrimSpace(parts[0])
-						if iface == "wlan0" || iface == "eth0" || iface == "rmnet_data0" || iface == "rndis0" || iface == "ap0" {
+						if iface == "wlan0" || iface == "eth0" || iface == "rmnet_data0" || iface == "rndis0" || iface == "ap0" || iface == "tailscale0" {
 							fields := strings.Fields(parts[1])
 							if len(fields) >= 9 {
 								rx, _ := strconv.ParseUint(fields[0], 10, 64)
@@ -423,7 +564,6 @@ func startMetricsCollector(storagePath string) {
 			currentSnapshot.Services = servicesList
 			snapshotMu.Unlock()
 
-			// 3. 内存与运行时间 (每 2 秒)
 			if tickCount%2 == 0 {
 				var memTotal, memAvail, swapTotal, swapFree, cached, buffers uint64
 				if file, err := os.Open("/proc/meminfo"); err == nil {
@@ -508,7 +648,6 @@ func startMetricsCollector(storagePath string) {
 				snapshotMu.Unlock()
 			}
 
-			// 4. 温度与电池真实健康及功耗 (每 3 秒，单次读取，0 额外开销)
 			if tickCount%3 == 0 {
 				var cpuT, batT string
 				for i := 0; i < 30; i++ {
@@ -559,6 +698,7 @@ func startMetricsCollector(storagePath string) {
 						}
 					}
 				}
+
 				for _, ifile := range []string{
 					"/sys/class/power_supply/battery/current_now",
 					"/sys/class/power_supply/bms/current_now",
@@ -581,13 +721,11 @@ func startMetricsCollector(storagePath string) {
 				if data, err := os.ReadFile("/sys/class/power_supply/battery/capacity"); err == nil {
 					bLevel = strings.TrimSpace(string(data))
 				}
-
 				bStatus := "Discharging"
 				if data, err := os.ReadFile("/sys/class/power_supply/battery/status"); err == nil {
 					bStatus = strings.TrimSpace(string(data))
 				}
 
-				// 通过 BatteryProvider 结构化计算健康度与平滑续航
 				batteryTelemetry := GlobalBatteryProvider.CollectTelemetry(vMv, iMa, bLevel, bStatus, batT)
 
 				snapshotMu.Lock()
@@ -597,7 +735,6 @@ func startMetricsCollector(storagePath string) {
 				snapshotMu.Unlock()
 			}
 
-			// 5. 存储空间 statfs (每 30 秒)
 			if tickCount%30 == 0 {
 				var stat syscall.Statfs_t
 				var totalKB, usedKB, freeKB uint64
@@ -630,10 +767,6 @@ func startMetricsCollector(storagePath string) {
 	}()
 }
 
-// =========================================================
-// ⚡ 原生安全 FTP 服务端 (0.0.0.0:2121)
-// =========================================================
-
 type FTPSession struct {
 	conn         net.Conn
 	reader       *bufio.Reader
@@ -657,7 +790,6 @@ func startFTPServer(port int, rootDir string) {
 		fmt.Printf("[FTP] 端口 %d 监听失败: %v\n", port, err)
 		return
 	}
-	fmt.Printf("[FTP] 原生安全 FTP 服务已就绪: ftp://0.0.0.0:%d (根目录: %s)\n", port, cleanRoot)
 
 	go func() {
 		for {
@@ -750,7 +882,7 @@ func (s *FTPSession) handle() {
 		case "SYST":
 			s.send("215 UNIX Type: L8")
 		case "FEAT":
-			s.send("211-Features:\n UTF8\n SIZE\n PASV\n EPSV\n REST STREAM\n211 End")
+			s.send("211-Features:\r\n UTF8\r\n SIZE\r\n PASV\r\n EPSV\r\n REST STREAM\r\n211 End")
 		case "PWD", "XPWD":
 			s.send(fmt.Sprintf("257 \"%s\" is current directory.", s.cwd))
 		case "TYPE":
@@ -1044,18 +1176,12 @@ func (s *FTPSession) handleSTOR(arg string) {
 	s.send("226 Transfer complete.")
 }
 
-// =========================================================
-// ⚡ 测速引擎与并发互斥保护
-// =========================================================
-
 func acquireSpeedtestSlot() bool {
 	stMutex.Lock()
 	defer stMutex.Unlock()
-
 	if stRunning && time.Since(stActiveTime) > 15*time.Second {
 		stRunning = false
 	}
-
 	if stRunning {
 		return false
 	}
@@ -1121,6 +1247,7 @@ func registerSpeedtestHandlers() {
 			if totalBytes-written < toWrite {
 				toWrite = totalBytes - written
 			}
+
 			n, err := w.Write(chunk[:toWrite])
 			written += int64(n)
 			if err != nil {
@@ -1152,50 +1279,71 @@ func registerSpeedtestHandlers() {
 	})
 }
 
-// =========================================================
-// 主服务入口
-// =========================================================
-
 func main() {
-	baseDir = getExecutableDir()
-	serverConfig = loadConfig(baseDir)
+	var (
+		flagPort    int
+		flagRefresh int
+		flagConfig  string
+	)
 
-	configDir := filepath.Join(baseDir, "../config")
-	if _, err := os.Stat(configDir); err != nil {
-		configDir = filepath.Join(baseDir, "config")
+	flag.IntVar(&flagPort, "port", 0, "Web 控制面板端口 (优先级高于 config.json)")
+	flag.IntVar(&flagRefresh, "refresh", 0, "前端状态刷新间隔秒数")
+	flag.StringVar(&flagConfig, "config", "", "指定 config.json 配置文件路径")
+	flag.Parse()
+
+	baseDir = getExecutableDir()
+	cwd, _ := os.Getwd()
+
+	var resolvedConfigPath string
+	serverConfig, resolvedConfigPath = loadConfig(baseDir, flagConfig)
+	actualConfigPath = resolvedConfigPath
+
+	if flagPort > 0 {
+		serverConfig.Port = flagPort
+	}
+	if flagRefresh > 0 {
+		serverConfig.RefreshSeconds = flagRefresh
 	}
 
-	// 1. 启动时仅执行一次全量硬件与芯片动态识别 (0 循环开销)
+	var configDir string
+	if actualConfigPath != "" {
+		configDir = filepath.Dir(actualConfigPath)
+	} else {
+		configDir = filepath.Join(baseDir, "config")
+		if fi, err := os.Stat(configDir); err != nil || !fi.IsDir() {
+			configDir = filepath.Join(baseDir, "../config")
+		}
+	}
+
 	GlobalHardwareInfo = DetectHardwareInfo()
-
-	// 2. 初始化智能存储分类统计扫描引擎
 	GlobalStorageScanner.Init(serverConfig.StoragePath)
-
-	// 3. 初始化统一 NAS 服务监控中心
 	GlobalServiceMonitor.Init(configDir)
 
-	// 4. 写入 PID
-	pidPath := filepath.Join(baseDir, "../data/pocket_nas.pid")
-	if dataDir, err := filepath.Abs(filepath.Dir(pidPath)); err == nil {
-		_ = os.MkdirAll(dataDir, 0755)
-		_ = os.WriteFile(pidPath, []byte(strconv.Itoa(os.Getpid())), 0644)
+	pidDir := filepath.Join(baseDir, "data")
+	if fi, err := os.Stat(pidDir); err != nil || !fi.IsDir() {
+		pidDir = filepath.Join(baseDir, "../data")
 	}
+	_ = os.MkdirAll(pidDir, 0755)
+	pidPath := filepath.Join(pidDir, "pocket_nas.pid")
+	_ = os.WriteFile(pidPath, []byte(strconv.Itoa(os.Getpid())), 0644)
 
-	// 5. 启动进程内零磁盘写入监控采集引擎
 	startMetricsCollector(serverConfig.StoragePath)
-
-	// 6. 启动单一原生安全 FTP 服务端 (2121 端口)
 	startFTPServer(serverConfig.FtpPort, serverConfig.StoragePath)
-
-	// 7. 注册测速专属路由
 	registerSpeedtestHandlers()
 
 	webDirCandidates := []string{
-		filepath.Join(baseDir, "../web"),
 		filepath.Join(baseDir, "web"),
-		"/data/adb/modules/pocket_nas/web",
-		"./web",
+		filepath.Join(baseDir, "../web"),
+		filepath.Join(cwd, "web"),
+		filepath.Join(cwd, "server/web"),
 	}
+	if actualConfigPath != "" {
+		webDirCandidates = append([]string{
+			filepath.Join(filepath.Dir(actualConfigPath), "web"),
+			filepath.Join(filepath.Dir(actualConfigPath), "../web"),
+		}, webDirCandidates...)
+	}
+	webDirCandidates = append(webDirCandidates, "/data/adb/modules/pocket_nas/web", "./web")
 
 	webDir := "./web"
 	for _, d := range webDirCandidates {
@@ -1205,7 +1353,6 @@ func main() {
 		}
 	}
 
-	// 8. 静态硬件详情 API 接口 (/api/hardware)
 	http.HandleFunc("/api/hardware", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.Header().Set("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0")
@@ -1214,7 +1361,6 @@ func main() {
 		_, _ = w.Write(data)
 	})
 
-	// 9. 存储分类详情 API 接口 (/api/storage/categories)
 	http.HandleFunc("/api/storage/categories", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.Header().Set("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0")
@@ -1223,7 +1369,6 @@ func main() {
 		_, _ = w.Write(data)
 	})
 
-	// 10. 存储重新扫描触发 API (/api/storage/rescan)
 	http.HandleFunc("/api/storage/rescan", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		triggered := GlobalStorageScanner.TriggerScanAsync()
@@ -1235,11 +1380,49 @@ func main() {
 		}
 	})
 
-	// 11. 统一服务监控 API 接口 (/api/services)
-	http.HandleFunc("/api/services", func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("/api/config", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.Header().Set("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0")
 
+		switch r.Method {
+		case http.MethodGet:
+			configMu.RLock()
+			data, _ := json.Marshal(serverConfig)
+			configMu.RUnlock()
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write(data)
+
+		case http.MethodPut, http.MethodPost:
+			var req struct {
+				UI UIConfig `json:"ui"`
+			}
+			if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+				w.WriteHeader(http.StatusBadRequest)
+				_, _ = io.WriteString(w, `{"error":"invalid json body"}`)
+				return
+			}
+
+			configMu.Lock()
+			err := saveUIConfigLocked(req.UI)
+			configMu.Unlock()
+
+			if err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				_, _ = fmt.Fprintf(w, `{"error":"%s"}`, err.Error())
+				return
+			}
+
+			w.WriteHeader(http.StatusOK)
+			_, _ = io.WriteString(w, `{"status":"ok","message":"配置已保存并持久化"}`)
+
+		default:
+			w.WriteHeader(http.StatusMethodNotAllowed)
+		}
+	})
+
+	http.HandleFunc("/api/services", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		w.Header().Set("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0")
 		lanIP, _ := getPhysicalLANIP()
 		curIP := lanIP.String()
 
@@ -1257,7 +1440,6 @@ func main() {
 				_, _ = io.WriteString(w, `{"error":"service not found"}`)
 				return
 			}
-
 			w.WriteHeader(http.StatusOK)
 			data, _ := json.Marshal(GlobalServiceMonitor.GetSnapshots(curIP))
 			_, _ = w.Write(data)
@@ -1312,17 +1494,14 @@ func main() {
 		}
 	})
 
-	// 12. 内存状态 API 接口 (/api/status)
 	http.HandleFunc("/api/status", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.Header().Set("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0")
 		w.Header().Set("Pragma", "no-cache")
 		w.Header().Set("Expires", "0")
-
 		snapshotMu.RLock()
 		data, err := json.Marshal(currentSnapshot)
 		snapshotMu.RUnlock()
-
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
@@ -1331,7 +1510,6 @@ func main() {
 		_, _ = w.Write(data)
 	})
 
-	// 13. 静态文件托管
 	fs := http.FileServer(http.Dir(webDir))
 	http.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
@@ -1340,13 +1518,26 @@ func main() {
 		fs.ServeHTTP(w, r)
 	}))
 
+	cfgDisplayPath := actualConfigPath
+	if cfgDisplayPath == "" {
+		cfgDisplayPath = "默认内置配置 (未检索到外部 config.json)"
+	}
+
+	fmt.Println("=========================================================")
+	fmt.Println(" [PocketNAS Pro v3.3.4] 守护进程启动就绪 (0-Fork, 0-Disk I/O)")
+	fmt.Printf(" - 配置文件路径: %s\n", cfgDisplayPath)
+	fmt.Printf(" - Web 控制面板: http://0.0.0.0:%d\n", serverConfig.Port)
+	fmt.Printf(" - 原生安全 FTP: ftp://0.0.0.0:%d (根目录: %s)\n", serverConfig.FtpPort, serverConfig.StoragePath)
+	fmt.Printf(" - 状态刷新间隔: %d 秒\n", serverConfig.RefreshSeconds)
+	fmt.Printf(" - 网页资源目录: %s\n", webDir)
+	fmt.Println("=========================================================")
+
 	server := &http.Server{
 		Addr:              ":" + strconv.Itoa(serverConfig.Port),
 		ReadHeaderTimeout: 10 * time.Second,
 		IdleTimeout:       60 * time.Second,
 	}
 
-	fmt.Printf("[PocketNAS Pro v3.3.1] Web 控制台已启动: http://0.0.0.0%s\n", server.Addr)
 	if err := server.ListenAndServe(); err != nil {
 		log.Printf("[PocketNAS Pro 警告] Web 端口 %d 监听失败: %v (将在 3 秒后重试)\n", serverConfig.Port, err)
 		time.Sleep(3 * time.Second)
